@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const Data = require('./models/Data');
 const ExcelJS = require('exceljs');
-const { Parser } = require("@json2csv/node");
+const { Parser } = require("json2csv");
 
 const app = express();
 app.use(express.json());
@@ -118,5 +118,6 @@ const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log(`🚀 Servidor escuchando en puerto ${port}`)
 );
+
 
 
