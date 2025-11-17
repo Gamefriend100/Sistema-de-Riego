@@ -8,25 +8,19 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Conexión a MongoDB Atlas usando MONGO_URI en .env
+// Render usa variables de entorno del panel — no requiere .env local
 const mongoUri = process.env.MONGO_URI;
-if (!mongoUri) {
-  console.error("⚠️  No se ha definido MONGO_URI en .env. Copia .env.example a .env y edítala.");
-  process.exit(1);
-}
 
 mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("✅ MongoDB conectado"))
   .catch(err => {
-    console.error("Error conectando a MongoDB:", err);
-    process.exit(1);
+    console.error("❌ Error conectando a MongoDB:", err);
   });
 
 // Endpoints
 app.post('/esp32/data', async (req, res) => {
   try {
-    const body = req.body;
-    const nuevo = new Data(body);
+    const nuevo = new Data(req.body);
     await nuevo.save();
     res.json({ mensaje: 'Datos guardados' });
   } catch (err) {
@@ -45,4 +39,4 @@ app.get('/datos', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Servidor escuchando en puerto ${port}`));
+app.listen(port, () => console.log(`🚀 Servidor escuchando en puerto ${port}`));
