@@ -1,4 +1,3 @@
-// models/Data.js
 const mongoose = require("mongoose");
 
 const DataSchema = new mongoose.Schema({
