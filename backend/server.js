@@ -6,13 +6,15 @@ const path = require("path");
 const ExcelJS = require("exceljs");
 const { Parser } = require("json2csv");
 
-// Modelo de datos
+// Modelo de datos actualizado
 const DataSchema = new mongoose.Schema({
-  humedad: Number,
-  temperatura: Number,
-  nivelAgua: Number,
+  humedadSuelo: Number,       // Humedad del suelo
+  temperatura: Number,        // Temperatura DHT
+  humedadSensor: Number,      // Humedad DHT
+  nivelAgua: Number,          // Nivel de agua
   fecha: { type: Date, default: Date.now }
 });
+
 const Data = mongoose.model("Data", DataSchema);
 
 const app = express();
@@ -42,8 +44,8 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
 // Ruta para recibir datos del ESP32
 app.post("/esp32/data", async (req, res) => {
   try {
-    const { humedad, temperatura, nivelAgua } = req.body;
-    const nuevo = new Data({ humedad, temperatura, nivelAgua });
+    const { humedadSuelo, temperatura, humedadSensor, nivelAgua } = req.body;
+    const nuevo = new Data({ humedadSuelo, temperatura, humedadSensor, nivelAgua });
     await nuevo.save();
     res.json({ mensaje: "Datos guardados" });
   } catch (err) {
@@ -71,9 +73,10 @@ app.get("/export/excel", async (req, res) => {
 
     sheet.columns = [
       { header: "Fecha", key: "fecha", width: 25 },
-      { header: "Humedad", key: "humedad", width: 10 },
-      { header: "Temperatura", key: "temperatura", width: 15 },
-      { header: "Nivel de Agua", key: "nivelAgua", width: 15 }
+      { header: "Humedad Suelo (%)", key: "humedadSuelo", width: 15 },
+      { header: "Temperatura (°C)", key: "temperatura", width: 15 },
+      { header: "Humedad Sensor (%)", key: "humedadSensor", width: 18 },
+      { header: "Nivel de Agua (%)", key: "nivelAgua", width: 15 }
     ];
 
     datos.forEach(d => sheet.addRow(d.toObject()));
@@ -98,7 +101,7 @@ app.get("/export/excel", async (req, res) => {
 app.get("/export/csv", async (req, res) => {
   try {
     const datos = await Data.find().sort({ fecha: -1 });
-    const parser = new Parser({ fields: ["fecha", "humedad", "temperatura", "nivelAgua"] });
+    const parser = new Parser({ fields: ["fecha", "humedadSuelo", "temperatura", "humedadSensor", "nivelAgua"] });
     const csv = parser.parse(datos);
 
     res.header("Content-Type", "text/csv");
@@ -112,5 +115,3 @@ app.get("/export/csv", async (req, res) => {
 // Iniciar servidor
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Servidor escuchando en puerto ${port}`));
-
-
