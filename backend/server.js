@@ -15,21 +15,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Servir frontend si lo agregas después
-app.use(express.static(path.join(__dirname, "frontend")));
+// ===============================
+// 🔵 FRONTEND EXTERNO (GitHub Pages)
+// ===============================
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+  res.redirect("https://gamefriend100.github.io/Sistema-de-Riego-Frontend/");
 });
 
-// Conexión a MongoDB
+// ===============================
+// 🔵 CONEXIÓN A MONGO
+// ===============================
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch((err) => console.error("Error al conectar Mongo:", err));
 
-// ---------------------
-// 🔵 CONFIGURAR ENVÍO DE EMAILS
-// ---------------------
+// ===============================
+// 🔵 EMAIL
+// ===============================
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -46,22 +49,20 @@ async function enviarCorreo(destinatario, asunto, mensaje) {
       subject: asunto,
       html: mensaje
     });
-
-    console.log("📩 Correo enviado:", destinatario);
+    console.log("📩 Correo enviado a:", destinatario);
   } catch (err) {
     console.error("Error enviando correo:", err);
   }
 }
 
-// ---------------------
-// 🔵 RUTA: GUARDAR EMAIL
-// ---------------------
+// ===============================
+// 🔵 GUARDAR EMAIL
+// ===============================
 app.post("/email/set", async (req, res) => {
   try {
     const { email } = req.body;
 
     let registro = await UserEmail.findOne();
-
     if (!registro) {
       registro = new UserEmail({ email });
     } else {
@@ -69,14 +70,13 @@ app.post("/email/set", async (req, res) => {
     }
 
     await registro.save();
-
     res.json({ mensaje: "Correo guardado", email });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Obtener correo actual
+// Obtener correo guardado
 app.get("/email/get", async (req, res) => {
   try {
     const registro = await UserEmail.findOne();
@@ -86,9 +86,9 @@ app.get("/email/get", async (req, res) => {
   }
 });
 
-// ---------------------
-// 🔵 RUTA: ESP32 ENVÍA DATOS
-// ---------------------
+// ===============================
+// 🔵 Guardar datos del ESP32
+// ===============================
 app.post("/esp32/data", async (req, res) => {
   try {
     const { humedad, temperatura, humedadSensor, nivelAgua, fecha } = req.body;
@@ -103,41 +103,32 @@ app.post("/esp32/data", async (req, res) => {
 
     await nuevo.save();
 
-    // Obtener email registrado
     const userEmail = await UserEmail.findOne();
 
     if (userEmail) {
-      // 🔥 Si el nivel de agua baja demasiado
       if (nivelAgua < 20) {
         enviarCorreo(
           userEmail.email,
           "⚠ ALERTA: Nivel de agua bajo",
           `<h2>El tanque está casi vacío</h2>
-           <p>Nivel actual: <b>${nivelAgua}%</b></p>
-           <p>Rellene el contenedor lo antes posible.</p>`
+           <p>Nivel actual: <b>${nivelAgua}%</b></p>`
         );
       }
 
-      // 🔥 Si la humedad del suelo es muy baja
       if (humedad < 25 && nivelAgua > 50) {
         enviarCorreo(
           userEmail.email,
-          "🌱 Suelo seco - Regando automáticamente",
+          "🌱 Suelo seco - Riego automático",
           `<h2>La humedad del suelo es baja</h2>
-           <p>Humedad: <b>${humedad}%</b></p>
-           <p>La bomba se activó automáticamente.</p>`
+           <p>Humedad: <b>${humedad}%</b></p>`
         );
       }
 
-      // 🔥 Humedad baja y tanque vacío → No regar
       if (humedad < 25 && nivelAgua < 25) {
         enviarCorreo(
           userEmail.email,
-          "⛔ No se puede activar la bomba",
-          `<h2>Suelo seco PERO sin agua disponible</h2>
-           <p>Humedad: <b>${humedad}%</b></p>
-           <p>Nivel de agua: <b>${nivelAgua}%</b></p>
-           <p>Debe rellenar el tanque.</p>`
+          "⛔ No se puede regar",
+          `<h2>Suelo seco pero sin agua disponible</h2>`
         );
       }
     }
@@ -149,9 +140,9 @@ app.post("/esp32/data", async (req, res) => {
   }
 });
 
-// ---------------------
-// 🔵 RUTA: CONSULTAR DATOS
-// ---------------------
+// ===============================
+// 🔵 OBTENER DATOS
+// ===============================
 app.get("/datos", async (req, res) => {
   try {
     const datos = await Data.find().sort({ _id: -1 }).limit(100);
@@ -161,9 +152,9 @@ app.get("/datos", async (req, res) => {
   }
 });
 
-// ---------------------
+// ===============================
 // 🔵 EXPORTAR A EXCEL
-// ---------------------
+// ===============================
 app.get("/export/excel", async (req, res) => {
   try {
     const datos = await Data.find().sort({ _id: -1 });
@@ -175,7 +166,7 @@ app.get("/export/excel", async (req, res) => {
       { header: "Humedad (%)", key: "humedad", width: 15 },
       { header: "Temperatura (°C)", key: "temperatura", width: 15 },
       { header: "Humedad Sensor (%)", key: "humedadSensor", width: 18 },
-      { header: "Nivel de Agua (%)", key: "nivelAgua", width: 15 }
+      { header: "Nivel Agua (%)", key: "nivelAgua", width: 15 }
     ];
 
     datos.forEach((d) => sheet.addRow(d.toObject()));
@@ -196,9 +187,9 @@ app.get("/export/excel", async (req, res) => {
   }
 });
 
-// ---------------------
+// ===============================
 // 🔵 EXPORTAR A CSV
-// ---------------------
+// ===============================
 app.get("/export/csv", async (req, res) => {
   try {
     const datos = await Data.find().sort({ _id: -1 });
@@ -216,9 +207,9 @@ app.get("/export/csv", async (req, res) => {
   }
 });
 
-// ---------------------
+// ===============================
 // 🔵 INICIAR SERVIDOR
-// ---------------------
+// ===============================
 app.listen(process.env.PORT, () =>
   console.log(`Servidor escuchando en puerto ${process.env.PORT}`)
 );
