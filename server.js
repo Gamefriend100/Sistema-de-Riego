@@ -3,23 +3,30 @@ import mongoose from "mongoose";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import path from "path";
 
 dotenv.config();
 const app = express();
+
+// Necesario para servir el index.html
+const __dirname = path.resolve();
+
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
-// SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND
+// SERVIR ARCHIVOS ESTÁTICOS (HTML, CSS, JS)
 // --------------------------------------------------
 app.use(express.static("public"));
 
+// Ruta raíz -> entrega index.html del folder public
 app.get("/", (req, res) => {
-  res.sendFile(process.cwd() + "/public/index.html");
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
 // --------------------------------------------------
-// CONEXIÓN A MONGODB
+// CONEXIÓN A MONGO
 // --------------------------------------------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
@@ -50,14 +57,13 @@ app.post("/api/registrar-email", async (req, res) => {
 });
 
 // --------------------------------------------------
-// RECIBIR DATOS ESP32
+// RECIBIR DATOS DEL ESP32
 // --------------------------------------------------
 app.post("/api/datos", async (req, res) => {
   try {
     await Registro.create(req.body);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error guardar registro:", err);
     res.status(500).json({ ok: false, err: String(err) });
   }
 });
@@ -81,14 +87,14 @@ app.post("/api/alertas", async (req, res) => {
     if (emails.length === 0) return res.json({ ok: true, msg: "No hay emails registrados" });
 
     const lista = emails.map(e => e.email);
-
     let mensaje = "";
+
     if (tipo === "suelo_y_agua_bajo")
       mensaje = "El suelo está seco y el nivel de agua es demasiado bajo. Rellena el tanque.";
     else if (tipo === "nivel_agua_bajo")
       mensaje = "El nivel de agua del depósito está por debajo del 25%. Rellénalo.";
     else if (tipo === "suelo_seco")
-      mensaje = "El suelo está seco (menos del 25%). Se activará la bomba.";
+      mensaje = "El suelo está seco (menos de 25%). Se activará la bomba.";
     else
       mensaje = "Alerta desconocida: " + tipo;
 
@@ -106,27 +112,20 @@ app.post("/api/alertas", async (req, res) => {
 
     res.json({ ok: true, msg: "Alertas enviadas" });
   } catch (err) {
-    console.error("Error enviar alertas:", err);
     res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
 // --------------------------------------------------
-// ENDPOINT STATUS
+// STATUS DEBUG
 // --------------------------------------------------
 app.get("/api/status", async (req, res) => {
-  try {
-    const countEmails = await Email.countDocuments();
-    const last = await Registro.findOne().sort({ fecha: -1 });
-    res.json({
-      ok: true,
-      mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      emailsRegistered: countEmails,
-      lastRegistro: last ?? null
-    });
-  } catch (err) {
-    res.json({ ok: false, err: String(err) });
-  }
+  const last = await Registro.findOne().sort({ fecha: -1 });
+  res.json({
+    ok: true,
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    lastRegistro: last ?? null
+  });
 });
 
 // --------------------------------------------------
@@ -134,3 +133,4 @@ app.get("/api/status", async (req, res) => {
 // --------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Servidor encendido en puerto", PORT));
+
