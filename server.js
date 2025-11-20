@@ -9,16 +9,17 @@ dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public"))); // Servir carpeta public
+app.use(express.static(path.join(__dirname, "public"))); // Servir carpeta public
 
 // Servir index.html en la raíz
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// MongoDB
+// Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.log("Error Mongo:", err));
