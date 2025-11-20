@@ -4,11 +4,66 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard - Sistema de Riego</title>
-  <link rel="stylesheet" href="style.css">
 
   <!-- Librerías para gauges -->
   <script src="https://cdn.jsdelivr.net/npm/raphael@2.3.0/raphael.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      text-align: center;
+      background-color: #2c3e50;
+      color: white;
+      padding: 1rem;
+    }
+
+    .gauges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .gauge-container {
+      flex: 1 1 150px; /* base width 150px, grow/shrink */
+      max-width: 250px;
+      text-align: center;
+    }
+
+    .gauge-container h3 {
+      margin: 0.5rem 0;
+    }
+
+    table {
+      width: 95%;
+      margin: 1rem auto;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 0.5rem;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .gauges {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -17,14 +72,26 @@
   </header>
 
   <section class="gauges">
-    <div id="gauge_suelo" class="gauge"></div>
-    <div id="gauge_agua" class="gauge"></div>
-    <div id="gauge_temp" class="gauge"></div>
-    <div id="gauge_hum" class="gauge"></div>
+    <div class="gauge-container">
+      <h3>Humedad Suelo</h3>
+      <div id="gauge_suelo"></div>
+    </div>
+    <div class="gauge-container">
+      <h3>Nivel Agua</h3>
+      <div id="gauge_agua"></div>
+    </div>
+    <div class="gauge-container">
+      <h3>Temperatura</h3>
+      <div id="gauge_temp"></div>
+    </div>
+    <div class="gauge-container">
+      <h3>Humedad Aire</h3>
+      <div id="gauge_hum"></div>
+    </div>
   </section>
 
   <section>
-    <h2>Últimos 10 registros</h2>
+    <h2 style="text-align:center;">Últimos 10 registros</h2>
     <table>
       <thead>
         <tr>
@@ -46,22 +113,22 @@
 
     function initGauges() {
       gSuelo = new JustGage({
-        id: "gauge_suelo", value:0, min:0, max:100, title:"Humedad Suelo",
+        id: "gauge_suelo", value:0, min:0, max:100, title:"",
         label:"%", levelColors:["#ff4d4d","#f9c802","#00ff88"],
         donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
       gAgua = new JustGage({
-        id: "gauge_agua", value:0, min:0, max:100, title:"Nivel Agua",
+        id: "gauge_agua", value:0, min:0, max:100, title:"",
         label:"%", levelColors:["#ff4d4d","#f9c802","#00bfff"],
         donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
       gTemp = new JustGage({
-        id: "gauge_temp", value:0, min:0, max:60, title:"Temperatura",
+        id: "gauge_temp", value:0, min:0, max:60, title:"",
         label:"°C", levelColors:["#00bfff","#f9c802","#ff4d4d"],
         donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
       gHum = new JustGage({
-        id: "gauge_hum", value:0, min:0, max:100, title:"Humedad Aire",
+        id: "gauge_hum", value:0, min:0, max:100, title:"",
         label:"%", levelColors:["#ff4d4d","#f9c802","#00ff88"],
         donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
@@ -122,5 +189,3 @@
   </script>
 </body>
 </html>
-
-
