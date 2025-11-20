@@ -1,0 +1,16 @@
+body {
+  font-family: Arial;
+  padding: 20px;
+}
+
+.tarjetas {
+  display: flex;
+  gap: 20px;
+}
+
+.card {
+  background: #e7f3ff;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 20px;
+}

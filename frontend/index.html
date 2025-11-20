@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sistema de Riego</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Dashboard de Riego Inteligente</h1>
+
+<div class="tarjetas">
+  <div class="card">Humedad Suelo: <span id="suelo">--</span>%</div>
+  <div class="card">Nivel Agua: <span id="agua">--</span>%</div>
+  <div class="card">Temperatura: <span id="temp">--</span>°C</div>
+  <div class="card">Humedad Aire: <span id="hum">--</span>%</div>
+</div>
+
+<h2>Últimos 10 registros</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Suelo %</th>
+      <th>Agua %</th>
+      <th>Temp °C</th>
+      <th>Humedad %</th>
+      <th>Fecha</th>
+    </tr>
+  </thead>
+  <tbody id="tabla"></tbody>
+</table>
+
+<script src="app.js"></script>
+</body>
+</html>
