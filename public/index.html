@@ -42,9 +42,6 @@
     </table>
   </section>
 
-  <script src="app.js"></script>
-
-  <!-- GAUGES JS -->
   <script>
     let gSuelo, gAgua, gTemp, gHum;
 
@@ -123,6 +120,8 @@
         const data = await res.json();
         if(data.length === 0) return;
         const u = data[0];
+
+        // refrescar valores y mostrar % o °C
         actualizarGauges(u.suelo, u.agua, u.temp, u.hum);
       } catch(e) { console.error(e); }
     }, 3000);
@@ -130,5 +129,4 @@
 
 </body>
 </html>
-
 
