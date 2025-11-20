@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dashboard - Sistema de Riego</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🔧 Sistema de Riego</h1>
+    <p id="status">Conectando...</p>
+  </header>
+
+  <section class="cards">
+    <div class="card">
+      <h3>Humedad Suelo</h3>
+      <div class="value" id="suelo">--</div>
+    </div>
+    <div class="card">
+      <h3>Nivel Agua</h3>
+      <div class="value" id="agua">--</div>
+    </div>
+    <div class="card">
+      <h3>Temperatura</h3>
+      <div class="value" id="temp">--</div>
+    </div>
+    <div class="card">
+      <h3>Humedad Aire</h3>
+      <div class="value" id="hum">--</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Últimos 10 registros</h2>
+    <table>
+      <thead>
+        <tr><th>Suelo</th><th>Agua</th><th>Temp</th><th>Hum</th><th>Fecha</th></tr>
+      </thead>
+      <tbody id="tabla"></tbody>
+    </table>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
