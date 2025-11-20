@@ -55,6 +55,7 @@
         min: 0,
         max: 100,
         title: "Humedad Suelo",
+        label: "%",
         levelColors: ["#ff4d4d","#f9c802","#00ff88"],
         gaugeWidthScale: 0.6,
         donut: true,
@@ -68,6 +69,7 @@
         min: 0,
         max: 100,
         title: "Nivel Agua",
+        label: "%",
         levelColors: ["#ff4d4d","#f9c802","#00bfff"],
         gaugeWidthScale: 0.6,
         donut: true,
@@ -81,6 +83,7 @@
         min: 0,
         max: 60,
         title: "Temperatura",
+        label: "°C",
         levelColors: ["#00bfff","#f9c802","#ff4d4d"],
         gaugeWidthScale: 0.6,
         donut: true,
@@ -94,6 +97,7 @@
         min: 0,
         max: 100,
         title: "Humedad Aire",
+        label: "%",
         levelColors: ["#ff4d4d","#f9c802","#00ff88"],
         gaugeWidthScale: 0.6,
         donut: true,
@@ -119,7 +123,7 @@
         const data = await res.json();
         if(data.length === 0) return;
         const u = data[0];
-        actualizarGauges(u.suelo,u.agua,u.temp,u.hum);
+        actualizarGauges(u.suelo, u.agua, u.temp, u.hum);
       } catch(e) { console.error(e); }
     }, 3000);
   </script>
