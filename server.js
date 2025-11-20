@@ -12,12 +12,7 @@ const __dirname = path.resolve();
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public"))); // Servir carpeta public
-
-// Servir index.html en la raíz
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
+app.use(express.static(path.join(__dirname, "public")));
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -58,11 +53,9 @@ app.post("/api/registrar-email", async (req, res) => {
 app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
-
     if ([suelo, agua, temp, hum].some(v => v === undefined)) {
       return res.status(400).json({ ok: false, msg: "Faltan datos" });
     }
-
     await Registro.create({ suelo, agua, temp, hum });
     res.json({ ok: true });
   } catch (err) {
@@ -126,9 +119,4 @@ app.get("/api/status", async (req, res) => {
     res.status(500).json({ ok: false, err: String(err) });
   }
 });
-
-// Servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor encendido en puerto", PORT));
-
 
