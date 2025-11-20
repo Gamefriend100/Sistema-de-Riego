@@ -7,34 +7,23 @@ import path from "path";
 
 dotenv.config();
 const app = express();
-
-// Necesario para servir el index.html
 const __dirname = path.resolve();
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../public"))); // Servir carpeta public
 
-// --------------------------------------------------
-// SERVIR ARCHIVOS ESTÁTICOS (HTML, CSS, JS)
-// --------------------------------------------------
-app.use(express.static("public"));
-
-// Ruta raíz -> entrega index.html del folder public
+// Servir index.html en la raíz
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-// --------------------------------------------------
-// CONEXIÓN A MONGO
-// --------------------------------------------------
+// MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.log("Error Mongo:", err));
 
-// --------------------------------------------------
-// SCHEMAS
-// --------------------------------------------------
+// Schemas
 const RegistroSchema = new mongoose.Schema({
   suelo: Number,
   agua: Number,
@@ -47,18 +36,14 @@ const EmailSchema = new mongoose.Schema({ email: String });
 const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 
-// --------------------------------------------------
-// REGISTRAR EMAIL
-// --------------------------------------------------
+// Registrar email
 app.post("/api/registrar-email", async (req, res) => {
   if (!req.body.email) return res.json({ ok: false, msg: "Email requerido" });
   await Email.create({ email: req.body.email });
   res.json({ ok: true, msg: "Email registrado correctamente" });
 });
 
-// --------------------------------------------------
-// RECIBIR DATOS DEL ESP32
-// --------------------------------------------------
+// Recibir datos ESP32
 app.post("/api/datos", async (req, res) => {
   try {
     await Registro.create(req.body);
@@ -68,35 +53,30 @@ app.post("/api/datos", async (req, res) => {
   }
 });
 
-// --------------------------------------------------
-// OBTENER ÚLTIMOS 10 REGISTROS
-// --------------------------------------------------
+// Últimos 10 registros
 app.get("/api/ultimos", async (req, res) => {
   const registros = await Registro.find().sort({ fecha: -1 }).limit(10);
   res.json(registros);
 });
 
-// --------------------------------------------------
-// ENVIAR ALERTAS
-// --------------------------------------------------
+// Alertas por correo
 app.post("/api/alertas", async (req, res) => {
   const tipo = req.body.tipo;
-
   try {
     const emails = await Email.find();
-    if (emails.length === 0) return res.json({ ok: true, msg: "No hay emails registrados" });
+    if (!emails.length) return res.json({ ok: true, msg: "No hay emails registrados" });
 
     const lista = emails.map(e => e.email);
     let mensaje = "";
 
     if (tipo === "suelo_y_agua_bajo")
-      mensaje = "El suelo está seco y el nivel de agua es demasiado bajo. Rellena el tanque.";
+      mensaje = "⚠ El suelo está seco y el tanque de agua bajo. Rellena el depósito.";
     else if (tipo === "nivel_agua_bajo")
-      mensaje = "El nivel de agua del depósito está por debajo del 25%. Rellénalo.";
+      mensaje = "⚠ Nivel de agua del depósito <25%. Rellénalo.";
     else if (tipo === "suelo_seco")
-      mensaje = "El suelo está seco (menos de 25%). Se activará la bomba.";
+      mensaje = "⚠ Suelo seco (<25%). La bomba se activará.";
     else
-      mensaje = "Alerta desconocida: " + tipo;
+      mensaje = "⚠ Alerta desconocida: " + tipo;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -106,7 +86,7 @@ app.post("/api/alertas", async (req, res) => {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       bcc: lista,
-      subject: "⚠ ALERTA – SISTEMA DE RIEGO",
+      subject: "ALERTA SISTEMA DE RIEGO",
       text: mensaje
     });
 
@@ -116,9 +96,7 @@ app.post("/api/alertas", async (req, res) => {
   }
 });
 
-// --------------------------------------------------
-// STATUS DEBUG
-// --------------------------------------------------
+// Status debug
 app.get("/api/status", async (req, res) => {
   const last = await Registro.findOne().sort({ fecha: -1 });
   res.json({
@@ -128,9 +106,7 @@ app.get("/api/status", async (req, res) => {
   });
 });
 
-// --------------------------------------------------
-// INICIAR SERVIDOR
-// --------------------------------------------------
+// Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Servidor encendido en puerto", PORT));
 
