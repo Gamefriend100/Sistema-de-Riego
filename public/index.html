@@ -57,6 +57,7 @@
         gaugeWidthScale: 0.6,
         donut: true,
         counter: true,
+        decimals: 1,
         hideInnerShadow: true
       });
 
@@ -71,6 +72,7 @@
         gaugeWidthScale: 0.6,
         donut: true,
         counter: true,
+        decimals: 1,
         hideInnerShadow: true
       });
 
@@ -85,6 +87,7 @@
         gaugeWidthScale: 0.6,
         donut: true,
         counter: true,
+        decimals: 1,
         hideInnerShadow: true
       });
 
@@ -99,6 +102,7 @@
         gaugeWidthScale: 0.6,
         donut: true,
         counter: true,
+        decimals: 1,
         hideInnerShadow: true
       });
     }
@@ -121,9 +125,15 @@
         if(data.length === 0) return;
         const u = data[0];
 
-        // refrescar valores y mostrar % o °C
-        actualizarGauges(u.suelo, u.agua, u.temp, u.hum);
-      } catch(e) { console.error(e); }
+        actualizarGauges(
+          parseFloat(u.suelo),
+          parseFloat(u.agua),
+          parseFloat(u.temp),
+          parseFloat(u.hum)
+        );
+      } catch(e) {
+        console.error(e);
+      }
     }, 3000);
   </script>
 
