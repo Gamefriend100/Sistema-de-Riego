@@ -10,6 +10,13 @@ app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
+// RUTA RAÍZ (SOLUCIÓN A "Cannot GET /")
+// --------------------------------------------------
+app.get("/", (req, res) => {
+  res.send("Servidor funcionando ✓");
+});
+
+// --------------------------------------------------
 // CONEXIÓN A MONGODB (TU URL DIRECTA)
 // --------------------------------------------------
 mongoose.connect(process.env.MONGO_URI)
