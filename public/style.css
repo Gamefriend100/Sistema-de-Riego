@@ -10,25 +10,37 @@ header {
   padding: 20px;
 }
 
+/* CONTENEDOR DE LOS GAUGES */
 .gauges {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  align-items: center;
+  gap: 25px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.gauge {
-  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: 30px;
   padding: 10px;
-  border-radius: 10px;
 }
 
+/* CADA GAUGE */
+.gauge {
+  width: 200px;     /* Más pequeño */
+  height: 200px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 15px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* TITULOS */
 section h2 {
   text-align: center;
   margin-top: 20px;
 }
 
+/* TABLA */
 table {
   width: 90%;
   margin: auto;
