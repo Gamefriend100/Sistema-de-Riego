@@ -6,18 +6,16 @@
   <title>Dashboard - Sistema de Riego</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Librerías para gauges modernos -->
+  <!-- Librerías para gauges -->
   <script src="https://cdn.jsdelivr.net/npm/raphael@2.3.0/raphael.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
 </head>
-
 <body>
   <header>
     <h1>🔧 Sistema de Riego</h1>
     <p id="status">Conectando...</p>
   </header>
 
-  <!-- GAUGES HORIZONTALES -->
   <section class="gauges">
     <div id="gauge_suelo" class="gauge"></div>
     <div id="gauge_agua" class="gauge"></div>
@@ -25,7 +23,6 @@
     <div id="gauge_hum" class="gauge"></div>
   </section>
 
-  <!-- TABLA -->
   <section>
     <h2>Últimos 10 registros</h2>
     <table>
@@ -43,100 +40,87 @@
   </section>
 
   <script>
+    const API = "https://sistema-de-riego-w2uh.onrender.com";
+
     let gSuelo, gAgua, gTemp, gHum;
 
     function initGauges() {
       gSuelo = new JustGage({
-        id: "gauge_suelo",
-        value: 0,
-        min: 0,
-        max: 100,
-        title: "Humedad Suelo",
-        label: "%",
-        levelColors: ["#ff4d4d","#f9c802","#00ff88"],
-        gaugeWidthScale: 0.6,
-        donut: true,
-        counter: true,
-        decimals: 1,
-        hideInnerShadow: true
+        id: "gauge_suelo", value:0, min:0, max:100, title:"Humedad Suelo",
+        label:"%", levelColors:["#ff4d4d","#f9c802","#00ff88"],
+        donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
-
       gAgua = new JustGage({
-        id: "gauge_agua",
-        value: 0,
-        min: 0,
-        max: 100,
-        title: "Nivel Agua",
-        label: "%",
-        levelColors: ["#ff4d4d","#f9c802","#00bfff"],
-        gaugeWidthScale: 0.6,
-        donut: true,
-        counter: true,
-        decimals: 1,
-        hideInnerShadow: true
+        id: "gauge_agua", value:0, min:0, max:100, title:"Nivel Agua",
+        label:"%", levelColors:["#ff4d4d","#f9c802","#00bfff"],
+        donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
-
       gTemp = new JustGage({
-        id: "gauge_temp",
-        value: 0,
-        min: 0,
-        max: 60,
-        title: "Temperatura",
-        label: "°C",
-        levelColors: ["#00bfff","#f9c802","#ff4d4d"],
-        gaugeWidthScale: 0.6,
-        donut: true,
-        counter: true,
-        decimals: 1,
-        hideInnerShadow: true
+        id: "gauge_temp", value:0, min:0, max:60, title:"Temperatura",
+        label:"°C", levelColors:["#00bfff","#f9c802","#ff4d4d"],
+        donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
-
       gHum = new JustGage({
-        id: "gauge_hum",
-        value: 0,
-        min: 0,
-        max: 100,
-        title: "Humedad Aire",
-        label: "%",
-        levelColors: ["#ff4d4d","#f9c802","#00ff88"],
-        gaugeWidthScale: 0.6,
-        donut: true,
-        counter: true,
-        decimals: 1,
-        hideInnerShadow: true
+        id: "gauge_hum", value:0, min:0, max:100, title:"Humedad Aire",
+        label:"%", levelColors:["#ff4d4d","#f9c802","#00ff88"],
+        donut:true, counter:true, decimals:1, gaugeWidthScale:0.6, hideInnerShadow:true
       });
     }
 
     function actualizarGauges(suelo, agua, temp, hum) {
-      gSuelo.refresh(suelo);
-      gAgua.refresh(agua);
-      gTemp.refresh(temp);
-      gHum.refresh(hum);
+      gSuelo.refresh(suelo ?? 0);
+      gAgua.refresh(agua ?? 0);
+      gTemp.refresh(temp ?? 0);
+      gHum.refresh(hum ?? 0);
     }
 
-    // Inicializar gauges
-    initGauges();
-
-    // Actualizar datos cada 3 segundos
-    setInterval(async () => {
+    async function actualizar() {
       try {
-        const res = await fetch("https://sistema-de-riego-w2uh.onrender.com/api/ultimos");
+        const res = await fetch(`${API}/api/ultimos`);
         const data = await res.json();
-        if(data.length === 0) return;
-        const u = data[0];
 
+        if (!Array.isArray(data) || data.length === 0) {
+          document.getElementById("tabla").innerHTML = `
+            <tr><td colspan="5" style="text-align:center;">No hay registros</td></tr>`;
+          actualizarGauges(0,0,0,0);
+          return;
+        }
+
+        const ultimo = data[0];
         actualizarGauges(
-          parseFloat(u.suelo),
-          parseFloat(u.agua),
-          parseFloat(u.temp),
-          parseFloat(u.hum)
+          parseFloat(ultimo.suelo),
+          parseFloat(ultimo.agua),
+          parseFloat(ultimo.temp),
+          parseFloat(ultimo.hum)
         );
-      } catch(e) {
-        console.error(e);
-      }
-    }, 3000);
-  </script>
 
+        let html = "";
+        data.forEach(r => {
+          html += `<tr>
+            <td>${r.suelo ?? 0}%</td>
+            <td>${r.agua ?? 0}%</td>
+            <td>${r.temp ?? 0}°C</td>
+            <td>${r.hum ?? 0}%</td>
+            <td>${new Date(r.fecha).toLocaleString()}</td>
+          </tr>`;
+        });
+        document.getElementById("tabla").innerHTML = html;
+
+      } catch(e) {
+        console.error("Error al actualizar:", e);
+        document.getElementById("tabla").innerHTML = `
+          <tr><td colspan="5" style="text-align:center;color:red;">
+          Error al conectar con la API
+          </td></tr>`;
+        actualizarGauges(0,0,0,0);
+      }
+    }
+
+    initGauges();
+    actualizar();
+    setInterval(actualizar, 3000);
+  </script>
 </body>
 </html>
+
 
