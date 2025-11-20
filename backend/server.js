@@ -10,18 +10,18 @@ app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
-// RUTA RAÍZ (SOLUCIÓN A "Cannot GET /")
+// RUTA RAÍZ (Render usa esta ruta para verificar que sirve algo)
 // --------------------------------------------------
 app.get("/", (req, res) => {
-  res.send("Servidor funcionando ✓");
+  res.status(200).send("API Sistema de Riego funcionando ✔");
 });
 
 // --------------------------------------------------
-// CONEXIÓN A MONGODB (TU URL DIRECTA)
+// CONEXIÓN A MONGO
 // --------------------------------------------------
 mongoose.connect(process.env.MONGO_URI)
-.then(()=>console.log("MongoDB conectado correctamente"))
-.catch(err=>console.log("Error MongoDB:", err));
+  .then(() => console.log("MongoDB conectado"))
+  .catch(err => console.log("Error Mongo:", err));
 
 // --------------------------------------------------
 // SCHEMAS
@@ -42,17 +42,17 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 
 // --------------------------------------------------
-// REGISTRAR CORREO
+// REGISTRAR EMAIL
 // --------------------------------------------------
-app.post("/api/registrar-email", async(req,res)=>{
-  if (!req.body.email) return res.json({ok:false, msg:"Email requerido"});
+app.post("/api/registrar-email", async (req, res) => {
+  if (!req.body.email) return res.json({ ok: false, msg: "Email requerido" });
 
-  await Email.create({email:req.body.email});
-  res.json({ok:true, msg:"Correo registrado exitosamente"});
+  await Email.create({ email: req.body.email });
+  res.json({ ok: true, msg: "Email registrado correctamente" });
 });
 
 // --------------------------------------------------
-// RECIBIR DATOS DEL ESP32
+// RECIBIR DATOS ESP32
 // --------------------------------------------------
 app.post("/api/datos", async (req, res) => {
   await Registro.create(req.body);
@@ -81,27 +81,26 @@ app.post("/api/alertas", async (req, res) => {
   let mensaje = "";
 
   if (tipo === "suelo_y_agua_bajo")
-    mensaje = "El suelo está seco y el nivel de agua es demasiado bajo para regar. Rellena el tanque.";
-  
-  if (tipo === "nivel_agua_bajo")
-    mensaje = "El nivel de agua del depósito está por debajo del 25%. Rellénalo.";
-  
-  if (tipo === "suelo_seco")
-    mensaje = "El suelo está seco (menos del 25%). Se activará la bomba.";
+    mensaje = "El suelo está seco y el nivel de agua es demasiado bajo. Rellena el tanque.";
 
-  // Configurar correos con tu Gmail
-  let transport = nodemailer.createTransport({
+  if (tipo === "nivel_agua_bajo")
+    mensaje = "El nivel de agua del depósito está bajo. Rellénalo.";
+
+  if (tipo === "suelo_seco")
+    mensaje = "El suelo está seco (menos de 25%). Se activará la bomba.";
+
+  let transporter = nodemailer.createTransport({
     service: "gmail",
-    auth: { 
-      user: process.env.EMAIL_USER, 
-      pass: process.env.EMAIL_PASS 
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
     }
   });
 
-  await transport.sendMail({
+  await transporter.sendMail({
     from: process.env.EMAIL_USER,
     bcc: lista,
-    subject: "⚠ ALERTA AUTOMÁTICA – SISTEMA DE RIEGO",
+    subject: "⚠ Alerta – Sistema de Riego",
     text: mensaje
   });
 
@@ -111,4 +110,5 @@ app.post("/api/alertas", async (req, res) => {
 // --------------------------------------------------
 // INICIAR SERVIDOR
 // --------------------------------------------------
-app.listen(process.env.PORT, ()=>console.log("API funcionando en puerto " + process.env.PORT));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Servidor encendido en puerto", PORT));
