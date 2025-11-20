@@ -1,4 +1,4 @@
-const API = "https://sistema-de-riego-w2uh.onrender.com";
+const API = ""; // ruta relativa
 
 // Gauges
 google.charts.load("current", { packages: ["gauge"] });
@@ -8,10 +8,10 @@ let dataSuelo, dataAgua, dataTemp, dataHum;
 let chartSuelo, chartAgua, chartTemp, chartHum;
 
 function initGauges() {
-  dataSuelo = google.visualization.arrayToDataTable([["Label", "Value"], ["Suelo", 0]]);
-  dataAgua = google.visualization.arrayToDataTable([["Label", "Value"], ["Agua", 0]]);
-  dataTemp  = google.visualization.arrayToDataTable([["Label", "Value"], ["Temp", 0]]);
-  dataHum   = google.visualization.arrayToDataTable([["Label", "Value"], ["Hum", 0]]);
+  dataSuelo = google.visualization.arrayToDataTable([["Label","Value"],["Suelo",0]]);
+  dataAgua  = google.visualization.arrayToDataTable([["Label","Value"],["Agua",0]]);
+  dataTemp  = google.visualization.arrayToDataTable([["Label","Value"],["Temp",0]]);
+  dataHum   = google.visualization.arrayToDataTable([["Label","Value"],["Hum",0]]);
 
   const optPercent = { min:0, max:100, width:150, height:150 };
   const optTemp    = { min:0, max:60, width:150, height:150 };
@@ -21,10 +21,10 @@ function initGauges() {
   chartTemp  = new google.visualization.Gauge(document.getElementById("gauge_temp"));
   chartHum   = new google.visualization.Gauge(document.getElementById("gauge_hum"));
 
-  chartSuelo.draw(dataSuelo, optPercent);
-  chartAgua.draw(dataAgua, optPercent);
-  chartTemp.draw(dataTemp, optTemp);
-  chartHum.draw(dataHum, optPercent);
+  chartSuelo.draw(dataSuelo,optPercent);
+  chartAgua.draw(dataAgua,optPercent);
+  chartTemp.draw(dataTemp,optTemp);
+  chartHum.draw(dataHum,optPercent);
 }
 
 function actualizarGauges(suelo, agua, temp, hum){
@@ -39,7 +39,6 @@ function actualizarGauges(suelo, agua, temp, hum){
   chartHum.draw(dataHum);
 }
 
-// Obtener datos cada 3s
 async function actualizar(){
   try{
     const res = await fetch(`${API}/api/ultimos`);
@@ -50,11 +49,9 @@ async function actualizar(){
       return;
     }
 
-    // Gauges
     const u = data[0];
     actualizarGauges(u.suelo,u.agua,u.temp,u.hum);
 
-    // Tabla
     let html="";
     data.forEach(r=>{
       html+=`<tr>
@@ -67,11 +64,8 @@ async function actualizar(){
     });
     document.getElementById("tabla").innerHTML = html;
 
-  }catch(e){
-    console.error(e);
-  }
+  }catch(e){ console.error(e); }
 }
 
 setInterval(actualizar,3000);
 actualizar();
-
