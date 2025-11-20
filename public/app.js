@@ -67,10 +67,10 @@ function initGauges() {
 
 // Refrescar gauges
 function actualizarGauges(suelo, agua, temp, hum) {
-  gSuelo.refresh(suelo ?? 0);
-  gAgua.refresh(agua ?? 0);
-  gTemp.refresh(temp ?? 0);
-  gHum.refresh(hum ?? 0);
+  gSuelo.refresh(Number(suelo) || 0);
+  gAgua.refresh(Number(agua) || 0);
+  gTemp.refresh(Number(temp) || 0);
+  gHum.refresh(Number(hum) || 0);
 }
 
 // Refrescar tabla y gauges
@@ -89,23 +89,23 @@ async function actualizar() {
     // Tomar el registro más reciente para los gauges
     const ultimo = data[0];
     actualizarGauges(
-      parseFloat(ultimo.suelo),
-      parseFloat(ultimo.agua),
-      parseFloat(ultimo.temp),
-      parseFloat(ultimo.hum)
+      ultimo.suelo,
+      ultimo.agua,
+      ultimo.temp,
+      ultimo.hum
     );
 
     // Construir tabla con los últimos 10 registros
-    let html = "";
-    data.forEach(r => {
-      html += `<tr>
+    const html = data.map(r => `
+      <tr>
         <td>${r.suelo ?? 0}%</td>
         <td>${r.agua ?? 0}%</td>
         <td>${r.temp ?? 0}°C</td>
         <td>${r.hum ?? 0}%</td>
         <td>${new Date(r.fecha).toLocaleString()}</td>
-      </tr>`;
-    });
+      </tr>
+    `).join("");
+
     document.getElementById("tabla").innerHTML = html;
 
   } catch (e) {
