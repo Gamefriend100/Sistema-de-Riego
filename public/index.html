@@ -2,22 +2,23 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard - Sistema de Riego</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Google Charts para los Gauge -->
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <!-- Google Charts -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 
-<body style="background:#2ecc71; margin:0; font-family:Arial;">
-
+<body>
   <header>
     <h1>🔧 Sistema de Riego</h1>
     <p id="status">Conectando...</p>
   </header>
 
-  <!-- ======= GAUGES ======= -->
+  <!-- ============================
+       GAUGES ARRIBA HORIZONTALES
+       ============================ -->
   <section class="gauges">
     <div id="gauge_suelo" class="gauge"></div>
     <div id="gauge_agua" class="gauge"></div>
@@ -25,32 +26,20 @@
     <div id="gauge_hum" class="gauge"></div>
   </section>
 
-  <!-- TARJETAS -->
-  <section class="cards">
-    <div class="card">
-      <h3>Humedad Suelo</h3>
-      <div class="value" id="suelo">--</div>
-    </div>
-    <div class="card">
-      <h3>Nivel Agua</h3>
-      <div class="value" id="agua">--</div>
-    </div>
-    <div class="card">
-      <h3>Temperatura</h3>
-      <div class="value" id="temp">--</div>
-    </div>
-    <div class="card">
-      <h3>Humedad Aire</h3>
-      <div class="value" id="hum">--</div>
-    </div>
-  </section>
-
-  <!-- TABLA -->
+  <!-- ============================
+       TABLA
+       ============================ -->
   <section>
     <h2>Últimos 10 registros</h2>
     <table>
       <thead>
-        <tr><th>Suelo</th><th>Agua</th><th>Temp</th><th>Hum</th><th>Fecha</th></tr>
+        <tr>
+          <th>Suelo</th>
+          <th>Agua</th>
+          <th>Temp</th>
+          <th>Hum</th>
+          <th>Fecha</th>
+        </tr>
       </thead>
       <tbody id="tabla"></tbody>
     </table>
@@ -58,7 +47,7 @@
 
   <script src="app.js"></script>
 
-  <!-- SCRIPT GAUGES -->
+  <!-- GAUGES JS -->
   <script>
     google.charts.load("current", { packages: ["gauge"] });
     google.charts.setOnLoadCallback(initGauges);
@@ -72,27 +61,13 @@
       dataTemp = google.visualization.arrayToDataTable([["Label", "Value"], ["Temp", 0]]);
       dataHum = google.visualization.arrayToDataTable([["Label", "Value"], ["Hum", 0]]);
 
-      const optPercent = {
-        min: 0, max: 100,
-        greenFrom: 50, greenTo: 100,
-        yellowFrom: 25, yellowTo: 50,
-        redFrom: 0, redTo: 25,
-        width: 250, height: 250,
-        majorTicks: ["0", "25", "50", "75", "100"]
-      };
-
-      const optTemp = {
-        min: 0, max: 60,
-        greenFrom: 0, greenTo: 25,
-        yellowFrom: 25, yellowTo: 35,
-        redFrom: 35, redTo: 60,
-        width: 250, height: 250
-      };
+      const optPercent = { min: 0, max: 100, width: 250, height: 250 };
+      const optTemp    = { min: 0, max: 60,  width: 250, height: 250 };
 
       chartSuelo = new google.visualization.Gauge(document.getElementById("gauge_suelo"));
-      chartAgua = new google.visualization.Gauge(document.getElementById("gauge_agua"));
-      chartTemp = new google.visualization.Gauge(document.getElementById("gauge_temp"));
-      chartHum = new google.visualization.Gauge(document.getElementById("gauge_hum"));
+      chartAgua  = new google.visualization.Gauge(document.getElementById("gauge_agua"));
+      chartTemp  = new google.visualization.Gauge(document.getElementById("gauge_temp"));
+      chartHum   = new google.visualization.Gauge(document.getElementById("gauge_hum"));
 
       chartSuelo.draw(dataSuelo, optPercent);
       chartAgua.draw(dataAgua, optPercent);
@@ -112,22 +87,18 @@
       chartHum.draw(dataHum);
     }
 
-    // Integración con tu app.js
+    // Obtener datos cada 3s
     setInterval(() => {
       fetch("https://sistema-de-riego-w2uh.onrender.com/api/ultimos")
         .then(r => r.json())
-        .then(d => {
-          if (d.length === 0) return;
-          const u = d[0];
+        .then(data => {
+          if (data.length === 0) return;
+          const u = data[0];
           actualizarGauges(u.suelo, u.agua, u.temp, u.hum);
         });
     }, 3000);
   </script>
+
 </body>
 </html>
-
-  <script src="app.js"></script>
-</body>
-</html>
-
 
