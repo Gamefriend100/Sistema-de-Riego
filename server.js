@@ -4,15 +4,21 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import path from "path";
+import twilio from "twilio";
 
 dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
+// Twilio WhatsApp
+const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"; // Número sandbox Twilio
+const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";  // Tu número
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public"))); // Servir carpeta public
+app.use(express.static(path.join(__dirname, "public")));
 
 // Servir index.html en la raíz
 app.get("/", (req, res) => {
@@ -78,34 +84,43 @@ app.get("/api/ultimos", async (req, res) => {
   }
 });
 
-// Alertas por correo
+// Alertas por correo y WhatsApp
 app.post("/api/alertas", async (req, res) => {
   try {
     const { tipo } = req.body;
-    const emails = await Email.find();
-    if (!emails.length) return res.json({ ok: true, msg: "No hay emails registrados" });
 
-    const lista = emails.map(e => e.email);
+    // --- Mensaje según tipo de alerta ---
     let mensaje = "";
-
     if (tipo === "suelo_y_agua_bajo") mensaje = "⚠ El suelo está seco y el tanque de agua bajo. Rellena el depósito.";
     else if (tipo === "nivel_agua_bajo") mensaje = "⚠ Nivel de agua del depósito <25%. Rellénalo.";
     else if (tipo === "suelo_seco") mensaje = "⚠ Suelo seco (<25%). La bomba se activará.";
     else mensaje = "⚠ Alerta desconocida: " + tipo;
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    // --- Enviar correo ---
+    const emails = await Email.find();
+    if (emails.length) {
+      const lista = emails.map(e => e.email);
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+      });
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        bcc: lista,
+        subject: "ALERTA SISTEMA DE RIEGO",
+        text: mensaje
+      });
+    }
+
+    // --- Enviar WhatsApp ---
+    await twilioClient.messages.create({
+      from: TWILIO_WHATSAPP_FROM,
+      to: TWILIO_WHATSAPP_TO,
+      body: mensaje
     });
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      bcc: lista,
-      subject: "ALERTA SISTEMA DE RIEGO",
-      text: mensaje
-    });
-
-    res.json({ ok: true, msg: "Alertas enviadas" });
+    res.json({ ok: true, msg: "Alertas enviadas por email y WhatsApp" });
   } catch (err) {
     res.status(500).json({ ok: false, err: String(err) });
   }
