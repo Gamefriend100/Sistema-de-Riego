@@ -54,13 +54,13 @@ try {
 const { email } = req.body;
 if (!email) return res.json({ ok: false, msg: "Email requerido" });
 
-```
+
 const existe = await Email.findOne({ email });
 if (existe) return res.json({ ok: false, msg: "Email ya registrado" });
 
 await Email.create({ email });
 res.json({ ok: true, msg: "Email registrado correctamente" });
-```
+
 
 } catch (err) {
 res.status(500).json({ ok: false, err: String(err) });
@@ -97,7 +97,7 @@ try {
 const { tipo } = req.body;
 const ahora = Date.now();
 
-```
+
 // Verificar cooldown
 if (alertaTimers[tipo] && ahora - alertaTimers[tipo] < ALERT_COOLDOWN_MS) {
   return res.json({ ok: false, msg: "Alerta en cooldown" });
@@ -138,7 +138,7 @@ await twilioClient.messages.create({
 alertaTimers[tipo] = ahora;
 
 res.json({ ok: true, msg: "Alertas enviadas por email y WhatsApp" });
-```
+
 
 } catch (err) {
 res.status(500).json({ ok: false, err: String(err) });
@@ -162,4 +162,5 @@ res.status(500).json({ ok: false, err: String(err) });
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor encendido en puerto ${PORT}`));
+
 
