@@ -15,10 +15,6 @@ const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"; // Número sandbox Twilio
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";  // Tu número
 
-// Cooldown por tipo de alerta (10 minutos)
-const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
-const alertaTimers = {}; // { tipoAlerta: timestampUltimoEnvio }
-
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -162,5 +158,6 @@ res.status(500).json({ ok: false, err: String(err) });
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor encendido en puerto ${PORT}`));
+
 
 
