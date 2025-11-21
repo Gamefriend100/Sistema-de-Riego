@@ -143,4 +143,3 @@ app.get("/api/status", async (req, res) => {
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor encendido en puerto ${PORT}`));
-
