@@ -6,7 +6,8 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import twilio from "twilio";
-import { Parser } from "@json2csv/plainjs"; // CORRECTO para ES Modules
+import { Parser } from "@json2csv/plainjs";
+import TelegramBot from "node-telegram-bot-api";
 
 dotenv.config();
 
@@ -20,6 +21,9 @@ const app = express();
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
+
+// Telegram Bot
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: false });
 
 // Middlewares
 app.use(cors({ origin: "*" }));
@@ -53,6 +57,23 @@ const TelegramSchema = new mongoose.Schema({
 const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
+
+// Función para enviar alertas por Telegram
+async function enviarTelegram(mensaje) {
+  try {
+    const chats = await Telegram.find();
+    for (const chat of chats) {
+      try {
+        await bot.sendMessage(chat.chatId.toString(), mensaje);
+        console.log(`Alerta enviada a Telegram: ${chat.chatId}`);
+      } catch (err) {
+        console.error("Error enviando Telegram:", err);
+      }
+    }
+  } catch (err) {
+    console.error("Error obteniendo chats Telegram:", err);
+  }
+}
 
 // Rutas principales
 app.get("/", (req, res) => {
@@ -141,7 +162,7 @@ app.get("/api/export/csv", async (req,res)=>{
   }
 });
 
-// Enviar alertas por correo y WhatsApp
+// Enviar alertas por correo, WhatsApp y Telegram
 app.post("/api/alertas", async (req,res)=>{
   try {
     const { tipo } = req.body;
@@ -155,7 +176,6 @@ app.post("/api/alertas", async (req,res)=>{
     const emails = await Email.find();
     if(emails.length){
       const lista = emails.map(e=>e.email);
-
       const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 587,
@@ -167,11 +187,6 @@ app.post("/api/alertas", async (req,res)=>{
         tls: { rejectUnauthorized: false }
       });
 
-      transporter.verify((error, success) => {
-        if(error) console.log("Error Nodemailer:", error);
-        else console.log("Servidor de correo listo:", success);
-      });
-
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         bcc: lista,
@@ -181,12 +196,14 @@ app.post("/api/alertas", async (req,res)=>{
     }
 
     // WhatsApp
-    console.log("Twilio enviando alerta...");
     await twilioClient.messages.create({
       from: TWILIO_WHATSAPP_FROM,
       to: TWILIO_WHATSAPP_TO,
       body: mensaje
     });
+
+    // Telegram
+    await enviarTelegram(mensaje);
 
     res.json({ ok:true, msg:"Alertas enviadas" });
   } catch(err){
@@ -242,6 +259,7 @@ app.get("/api/status", async (req,res)=>{
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+
 
 
 
