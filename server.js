@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import twilio from "twilio";
 import { Parser } from "@json2csv/plainjs";
-import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -55,31 +54,12 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
 
-// Rutas principales
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-
-// Registrar Email
-app.post("/api/setEmail", async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ ok: false, msg: "Email requerido" });
-    const existe = await Email.findOne({ email });
-    if (existe) return res.json({ ok: false, msg: "Email ya registrado" });
-    await Email.create({ email });
-    res.json({ ok: true, msg: "Email registrado correctamente" });
-  } catch (err) {
-    res.status(500).json({ ok: false, msg: "Error al registrar email", err: String(err) });
-  }
-});
-
 // Webhook Telegram
-app.post(`/webhook/telegram`, async (req, res) => {
+app.post("/webhook/telegram", async (req, res) => {
   try {
-    console.log("Webhook recibido:", JSON.stringify(req.body));
-
+    console.log("Webhook recibido:", req.body);
     const update = req.body;
+
     if (update.message) {
       const chatId = update.message.chat.id.toString();
       const text = update.message.text;
@@ -89,10 +69,9 @@ app.post(`/webhook/telegram`, async (req, res) => {
         if (!existe) {
           await Telegram.create({ chatId });
           console.log("✅ Nuevo chatId registrado:", chatId);
-        } else {
-          console.log("⚠ ChatId ya registrado:", chatId);
         }
 
+        // fetch nativo de Node 18+ (Node 25 ya lo tiene)
         const resp = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -106,14 +85,31 @@ app.post(`/webhook/telegram`, async (req, res) => {
       }
     }
 
-    res.status(200).send({ ok: true, msg: "Webhook recibido" });
+    res.status(200).send({ ok: true });
   } catch (err) {
     console.log("Error webhook Telegram:", err);
     res.status(500).send({ ok: false, err: String(err) });
   }
 });
 
-// Listar chats registrados
+// Rutas
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
+
+app.post("/api/setEmail", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ ok: false, msg: "Email requerido" });
+    const existe = await Email.findOne({ email });
+    if (existe) return res.json({ ok: false, msg: "Email ya registrado" });
+    await Email.create({ email });
+    res.json({ ok: true, msg: "Email registrado correctamente" });
+  } catch (err) {
+    res.status(500).json({ ok: false, err: String(err) });
+  }
+});
+
 app.get("/api/telegram/list", async (req, res) => {
   try {
     const chats = await Telegram.find().sort({ fecha: -1 });
@@ -123,7 +119,6 @@ app.get("/api/telegram/list", async (req, res) => {
   }
 });
 
-// Recibir datos ESP32
 app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
@@ -137,7 +132,6 @@ app.post("/api/datos", async (req, res) => {
   }
 });
 
-// Alertas por correo, WhatsApp y Telegram
 app.post("/api/alertas", async (req, res) => {
   try {
     const { tipo } = req.body;
@@ -147,7 +141,7 @@ app.post("/api/alertas", async (req, res) => {
     else if (tipo === "suelo_seco") mensaje = "⚠ El suelo está seco.";
     else mensaje = "⚠ Alerta desconocida";
 
-    // Correos
+    // Enviar correos
     const emails = await Email.find();
     if (emails.length) {
       const lista = emails.map(e => e.email);
@@ -176,11 +170,13 @@ app.post("/api/alertas", async (req, res) => {
     // Telegram
     const chats = await Telegram.find();
     for (const chat of chats) {
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+      const resp = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chat.chatId, text: mensaje })
       });
+      const jsonResp = await resp.json();
+      console.log("Alerta enviada a Telegram:", jsonResp);
     }
 
     res.json({ ok: true, msg: "Alertas enviadas" });
@@ -200,7 +196,7 @@ app.get("/api/ultimos", async (req, res) => {
   }
 });
 
-// Exportar registros JSON
+// Exportar JSON
 app.get("/api/export", async (req, res) => {
   try {
     const registros = await Registro.find().sort({ fecha: -1 });
@@ -210,7 +206,7 @@ app.get("/api/export", async (req, res) => {
   }
 });
 
-// Exportar registros CSV
+// Exportar CSV
 app.get("/api/export/csv", async (req, res) => {
   try {
     const registros = await Registro.find().sort({ fecha: -1 });
@@ -242,5 +238,4 @@ app.get("/api/status", async (req, res) => {
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Servidor corriendo en puerto", PORT));
-
 
