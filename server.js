@@ -82,14 +82,12 @@ app.post(`/webhook/telegram`, async (req, res) => {
       const chatId = update.message.chat.id.toString();
       const text = update.message.text;
 
-      // Registrar automáticamente el chatId si hace /start
       if(text === "/start") {
         const existe = await Telegram.findOne({ chatId });
         if(!existe) {
           await Telegram.create({ chatId });
           console.log("Nuevo chatId registrado:", chatId);
         }
-        // Mensaje de bienvenida
         await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -101,6 +99,16 @@ app.post(`/webhook/telegram`, async (req, res) => {
   } catch(err) {
     console.log("Error webhook Telegram:", err);
     res.sendStatus(500);
+  }
+});
+
+// Listar chats registrados
+app.get("/api/telegram/list", async (req, res) => {
+  try {
+    const chats = await Telegram.find();
+    res.json({ ok: true, chats });
+  } catch(err) {
+    res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
@@ -172,7 +180,50 @@ app.post("/api/alertas", async (req,res)=>{
 });
 
 // Resto de endpoints (export, status, etc.) se mantienen igual...
-// ...
+app.get("/api/ultimos", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 }).limit(10);
+    res.json(registros);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+app.get("/api/export", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 });
+    res.json(registros);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+app.get("/api/export/csv", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 });
+    const fields = ["suelo","agua","temp","hum","fecha"];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(registros);
+    res.header("Content-Type","text/csv");
+    res.attachment("datos_sistema_riego.csv");
+    return res.send(csv);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+app.get("/api/status", async (req,res)=>{
+  try {
+    const last = await Registro.findOne().sort({ fecha:-1 });
+    res.json({
+      ok:true,
+      mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      lastRegistro: last
+    });
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
 
 // Servidor
 const PORT = process.env.PORT || 3000;
