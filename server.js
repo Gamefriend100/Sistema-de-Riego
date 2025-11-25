@@ -180,61 +180,58 @@ res.status(500).json({ ok:false, err:String(err) });
 
 // Enviar alertas por correo, WhatsApp y Telegram
 app.post("/api/alertas", async (req,res)=>{
-try {
-const { tipo } = req.body;
-let mensaje = "";
-if(tipo==="suelo_y_agua_bajo") mensaje="⚠ Suelo seco + tanque bajo.";
-else if(tipo==="nivel_agua_bajo") mensaje="⚠ Nivel de agua bajo.";
-else if(tipo==="suelo_seco") mensaje="⚠ El suelo está seco.";
-else mensaje="⚠ Alerta desconocida";
+  try {
+    const { tipo } = req.body;
+    let mensaje = "";
 
+    // Personalizar mensajes
+    if(tipo === "suelo_y_agua_bajo") 
+        mensaje = "⚠ Bajo nivel de agua y suelo seco";
+    else if(tipo === "nivel_agua_bajo") 
+        mensaje = "⚠ Nivel de agua bajo";
+    else if(tipo === "suelo_seco") 
+        mensaje = "⚠ Suelo seco";
+    else 
+        mensaje = "⚠ Alerta desconocida";
 
-// Correos
-const emails = await Email.find();
-if(emails.length){
-  const lista = emails.map(e=>e.email);
+    // Correos
+    const emails = await Email.find();
+    if(emails.length){
+      const lista = emails.map(e => e.email);
+      const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        },
+        tls: { rejectUnauthorized: false }
+      });
 
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    tls: { rejectUnauthorized: false }
-  });
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        bcc: lista,
+        subject: "ALERTA SISTEMA DE RIEGO",
+        text: mensaje
+      });
+    }
 
-  transporter.verify((error, success) => {
-    if(error) console.log("Error Nodemailer:", error);
-    else console.log("Servidor de correo listo:", success);
-  });
+    // WhatsApp
+    await twilioClient.messages.create({
+      from: TWILIO_WHATSAPP_FROM,
+      to: TWILIO_WHATSAPP_TO,
+      body: mensaje
+    });
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    bcc: lista,
-    subject: "ALERTA SISTEMA DE RIEGO",
-    text: mensaje
-  });
-}
+    // Telegram
+    await enviarTelegram(mensaje);
 
-// WhatsApp
-console.log("Twilio enviando alerta...");
-await twilioClient.messages.create({
-  from: TWILIO_WHATSAPP_FROM,
-  to: TWILIO_WHATSAPP_TO,
-  body: mensaje
-});
-
-// Telegram
-await enviarTelegram(mensaje);
-
-res.json({ ok:true, msg:"Alertas enviadas" });
-
-} catch(err){
-console.log("ERROR ALERTAS:", err);
-res.status(500).json({ ok:false, err:String(err) });
-}
+    res.json({ ok:true, msg:"Alertas enviadas" });
+  } catch(err){
+    console.log("ERROR ALERTAS:", err);
+    res.status(500).json({ ok:false, err:String(err) });
+  }
 });
 
 // Endpoint para probar SMTP Gmail
@@ -286,4 +283,5 @@ res.status(500).json({ ok:false, err:String(err) });
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+
 
