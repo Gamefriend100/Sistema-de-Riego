@@ -6,17 +6,17 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import twilio from "twilio";
-import { Parser } from "@json2csv/plainjs";
+import { Parser } from "@json2csv/plainjs"; // CORRECTO para ES Modules
 
 dotenv.config();
 
+// Fix para __dirname en módulos ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Variables de entorno
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+// Twilio WhatsApp
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
@@ -54,104 +54,124 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
 
-// Webhook Telegram
-app.post("/webhook/telegram", async (req, res) => {
-  try {
-    console.log("Webhook recibido:", req.body);
-    const update = req.body;
-
-    if (update.message) {
-      const chatId = update.message.chat.id.toString();
-      const text = update.message.text;
-
-      if (text === "/start") {
-        const existe = await Telegram.findOne({ chatId });
-        if (!existe) {
-          await Telegram.create({ chatId });
-          console.log("✅ Nuevo chatId registrado:", chatId);
-        }
-
-        // fetch nativo de Node 18+ (Node 25 ya lo tiene)
-        const resp = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: "✅ Bot activo. Recibirás alertas de riego."
-          })
-        });
-        const jsonResp = await resp.json();
-        console.log("Respuesta Telegram:", jsonResp);
-      }
-    }
-
-    res.status(200).send({ ok: true });
-  } catch (err) {
-    console.log("Error webhook Telegram:", err);
-    res.status(500).send({ ok: false, err: String(err) });
-  }
-});
-
-// Rutas
+// Rutas principales
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
+// Registrar Email
 app.post("/api/setEmail", async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ ok: false, msg: "Email requerido" });
+    if (!email) return res.status(400).json({ ok:false, msg:"Email requerido" });
+
     const existe = await Email.findOne({ email });
-    if (existe) return res.json({ ok: false, msg: "Email ya registrado" });
+    if (existe) return res.json({ ok:false, msg:"Email ya registrado" });
+
     await Email.create({ email });
-    res.json({ ok: true, msg: "Email registrado correctamente" });
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
+    res.json({ ok:true, msg:"Email registrado correctamente" });
+  } catch(err){
+    res.status(500).json({ ok:false, msg:"Error al registrar email", err:String(err) });
   }
 });
 
-app.get("/api/telegram/list", async (req, res) => {
+// Registrar Telegram
+app.post("/api/setTelegram", async (req, res) => {
   try {
-    const chats = await Telegram.find().sort({ fecha: -1 });
-    res.json({ ok: true, chats });
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
+    const { chatId } = req.body;
+    if (!chatId) return res.status(400).json({ ok:false, msg:"Chat ID requerido" });
+
+    const existe = await Telegram.findOne({ chatId });
+    if (existe) return res.json({ ok:false, msg:"Telegram ya registrado" });
+
+    await Telegram.create({ chatId });
+    res.json({ ok:true, msg:"Telegram registrado correctamente" });
+  } catch(err){
+    res.status(500).json({ ok:false, msg:"Error al registrar Telegram", err:String(err) });
   }
 });
 
+// Recibir datos ESP32
 app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
     if ([suelo, agua, temp, hum].includes(undefined))
-      return res.status(400).json({ ok: false, msg: "Faltan datos" });
+      return res.status(400).json({ ok:false, msg:"Faltan datos" });
 
     await Registro.create({ suelo, agua, temp, hum });
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
+    res.json({ ok:true });
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
   }
 });
 
-app.post("/api/alertas", async (req, res) => {
+// Últimos registros
+app.get("/api/ultimos", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 }).limit(10);
+    res.json(registros);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+// Exportar todos los registros en JSON
+app.get("/api/export", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 });
+    res.json(registros);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+// Exportar todos los registros en CSV
+app.get("/api/export/csv", async (req,res)=>{
+  try {
+    const registros = await Registro.find().sort({ fecha:-1 });
+    const fields = ["suelo","agua","temp","hum","fecha"];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(registros);
+
+    res.header("Content-Type","text/csv");
+    res.attachment("datos_sistema_riego.csv");
+    return res.send(csv);
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
+  }
+});
+
+// Enviar alertas por correo y WhatsApp
+app.post("/api/alertas", async (req,res)=>{
   try {
     const { tipo } = req.body;
     let mensaje = "";
-    if (tipo === "suelo_y_agua_bajo") mensaje = "⚠ Suelo seco + tanque bajo.";
-    else if (tipo === "nivel_agua_bajo") mensaje = "⚠ Nivel de agua bajo.";
-    else if (tipo === "suelo_seco") mensaje = "⚠ El suelo está seco.";
-    else mensaje = "⚠ Alerta desconocida";
+    if(tipo==="suelo_y_agua_bajo") mensaje="⚠ Suelo seco + tanque bajo.";
+    else if(tipo==="nivel_agua_bajo") mensaje="⚠ Nivel de agua bajo.";
+    else if(tipo==="suelo_seco") mensaje="⚠ El suelo está seco.";
+    else mensaje="⚠ Alerta desconocida";
 
-    // Enviar correos
+    // Correos
     const emails = await Email.find();
-    if (emails.length) {
-      const lista = emails.map(e => e.email);
+    if(emails.length){
+      const lista = emails.map(e=>e.email);
+
       const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 587,
         secure: false,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        },
         tls: { rejectUnauthorized: false }
       });
+
+      transporter.verify((error, success) => {
+        if(error) console.log("Error Nodemailer:", error);
+        else console.log("Servidor de correo listo:", success);
+      });
+
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         bcc: lista,
@@ -161,81 +181,67 @@ app.post("/api/alertas", async (req, res) => {
     }
 
     // WhatsApp
+    console.log("Twilio enviando alerta...");
     await twilioClient.messages.create({
       from: TWILIO_WHATSAPP_FROM,
       to: TWILIO_WHATSAPP_TO,
       body: mensaje
     });
 
-    // Telegram
-    const chats = await Telegram.find();
-    for (const chat of chats) {
-      const resp = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat.chatId, text: mensaje })
-      });
-      const jsonResp = await resp.json();
-      console.log("Alerta enviada a Telegram:", jsonResp);
-    }
-
-    res.json({ ok: true, msg: "Alertas enviadas" });
-  } catch (err) {
+    res.json({ ok:true, msg:"Alertas enviadas" });
+  } catch(err){
     console.log("ERROR ALERTAS:", err);
-    res.status(500).json({ ok: false, err: String(err) });
+    res.status(500).json({ ok:false, err:String(err) });
   }
 });
 
-// Últimos registros
-app.get("/api/ultimos", async (req, res) => {
+// Endpoint para probar SMTP Gmail
+app.get("/api/test-smtp", async (req, res) => {
   try {
-    const registros = await Registro.find().sort({ fecha: -1 }).limit(10);
-    res.json(registros);
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      tls: { rejectUnauthorized: false }
+    });
+
+    transporter.verify((error, success) => {
+      if(error){
+        console.log("Error SMTP:", error);
+        return res.status(500).json({ ok:false, msg:"Error al conectar con SMTP", error: String(error) });
+      } else {
+        console.log("SMTP Gmail listo:", success);
+        return res.json({ ok:true, msg:"Conexión SMTP correcta con Gmail" });
+      }
+    });
+
+  } catch(err){
+    console.log("ERROR TEST SMTP:", err);
+    res.status(500).json({ ok:false, msg:"Error interno al probar SMTP", error: String(err) });
   }
 });
 
-// Exportar JSON
-app.get("/api/export", async (req, res) => {
+// Status
+app.get("/api/status", async (req,res)=>{
   try {
-    const registros = await Registro.find().sort({ fecha: -1 });
-    res.json(registros);
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
-  }
-});
-
-// Exportar CSV
-app.get("/api/export/csv", async (req, res) => {
-  try {
-    const registros = await Registro.find().sort({ fecha: -1 });
-    const fields = ["suelo", "agua", "temp", "hum", "fecha"];
-    const parser = new Parser({ fields });
-    const csv = parser.parse(registros);
-    res.header("Content-Type", "text/csv");
-    res.attachment("datos_sistema_riego.csv");
-    return res.send(csv);
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
-  }
-});
-
-// Estado del sistema
-app.get("/api/status", async (req, res) => {
-  try {
-    const last = await Registro.findOne().sort({ fecha: -1 });
+    const last = await Registro.findOne().sort({ fecha:-1 });
     res.json({
-      ok: true,
+      ok:true,
       mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
       lastRegistro: last
     });
-  } catch (err) {
-    res.status(500).json({ ok: false, err: String(err) });
+  } catch(err){
+    res.status(500).json({ ok:false, err:String(err) });
   }
 });
 
 // Servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor corriendo en puerto", PORT));
+app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+
+
 
