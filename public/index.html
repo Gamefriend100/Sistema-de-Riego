@@ -9,6 +9,9 @@
   <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+  <!-- Chart.js para histórico -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body { font-family: Arial, sans-serif; margin:0; padding:0; background-color:#b2d8b2; }
     header { text-align:center; background:#2c3e50; color:white; padding:1rem; }
@@ -19,11 +22,6 @@
     table { width:95%; margin:1rem auto; border-collapse:collapse; font-size:0.8rem; }
     th, td { padding:0.3rem; text-align:center; border:1px solid #ccc; }
     thead th { background-color:#006400; color:white; }
-    #registro { width:95%; margin:0.5rem auto; padding:0.5rem; background:white; border-radius:5px; box-shadow:0 0 5px rgba(0,0,0,0.2); }
-    #registro h2 { margin-top:0; font-size:1rem; }
-    
-    /* Botón de Telegram eliminado → se elimina la clase */
-    
     #export-buttons { text-align:center; margin:1rem 0; }
     #export-buttons button { margin:0 0.3rem; padding:0.4rem 0.8rem; font-size:0.9rem; border:none; border-radius:5px; background:#2c3e50; color:white; cursor:pointer; }
     #export-buttons button:hover { background:#1a252f; }
@@ -36,9 +34,10 @@
     <p id="status"></p>
   </header>
 
-  <section id="registro">
-    <h2>Registro de Alertas</h2>
-    <!-- Botón de Telegram eliminado -->
+  <!-- HISTÓRICO NIVEL DE AGUA -->
+  <section style="width:95%; margin:1rem auto; background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+    <h2 style="text-align:center;">Histórico del Nivel de Agua</h2>
+    <canvas id="histAgua" height="120"></canvas>
   </section>
 
   <section class="gauges">
@@ -72,7 +71,53 @@
   </section>
 
   <script>
-    // Función de colores
+    // === HISTÓRICO DEL NIVEL DE AGUA ===
+    let aguaHistory = [];
+    let labelHistory = [];
+
+    let ctxAgua;
+    let chartAgua;
+
+    function initChartAgua() {
+      ctxAgua = document.getElementById("histAgua").getContext("2d");
+
+      chartAgua = new Chart(ctxAgua, {
+        type: 'line',
+        data: {
+          labels: labelHistory,
+          datasets: [{
+            label: "Nivel de Agua (%)",
+            data: aguaHistory,
+            borderWidth: 2,
+            borderColor: "#007BFF",
+            backgroundColor: "rgba(0,123,255,0.2)",
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, max: 100 }
+          }
+        }
+      });
+    }
+
+    function actualizarChartAgua(valorAgua) {
+      const hora = new Date().toLocaleTimeString();
+
+      if (aguaHistory.length > 20) {
+        aguaHistory.shift();
+        labelHistory.shift();
+      }
+
+      aguaHistory.push(valorAgua);
+      labelHistory.push(hora);
+
+      chartAgua.update();
+    }
+
+    // ==== COLORES ====
     function getColorCustom(value, max, type) {
       const percent = Math.min(Math.max(value / max, 0), 1);
       switch(type) {
@@ -84,33 +129,36 @@
       return "#000";
     }
 
+    // === GAUGES ===
     let gSuelo, gAgua, gTemp, gHum;
 
     function initGauges() {
       gSuelo = new JustGage({ id:"gauge_suelo", value:0, min:0, max:100, label:"%" });
-      gAgua  = new JustGage({ id:"gauge_agua",  value:0, min:0, max:100, label:"%" });
-      gTemp  = new JustGage({ id:"gauge_temp",  value:0, min:0, max:60,  label:"°C" });
-      gHum   = new JustGage({ id:"gauge_hum",   value:0, min:0, max:100, label:"%" });
+      gAgua  = new JustGage({ id:"gauge_agua", value:0, min:0, max:100, label:"%" });
+      gTemp  = new JustGage({ id:"gauge_temp", value:0, min:0, max:60, label:"°C" });
+      gHum   = new JustGage({ id:"gauge_hum", value:0, min:0, max:100, label:"%" });
     }
 
     function actualizarGauges(suelo, agua, temp, hum) {
-      gSuelo.refresh(Number(suelo) || 0);
-      gAgua.refresh(Number(agua) || 0);
-      gTemp.refresh(Number(temp) || 0);
-      gHum.refresh(Number(hum) || 0);
+      gSuelo.refresh(Number(suelo)||0);
+      gAgua.refresh(Number(agua)||0);
+      gTemp.refresh(Number(temp)||0);
+      gHum.refresh(Number(hum)||0);
+
+      actualizarChartAgua(Number(agua)); // ← Histórico
 
       let mensaje = "✔️ Todo en rango";
       let color = "#228B22";
 
-      if (suelo < 25 && agua < 25) { mensaje="⚠️ Bajo nivel de agua y suelo seco"; color="red"; }
-      else if (suelo < 25) { mensaje="⚠️ Humedad del suelo baja"; color="orange"; }
-      else if (agua < 25) { mensaje="⚠️ Nivel de agua bajo"; color="orange"; }
+      if (suelo < 25 && agua < 25) { mensaje = "⚠️ Bajo nivel de agua y suelo seco"; color = "red"; }
+      else if (suelo < 25) { mensaje = "⚠️ Humedad del suelo baja"; color = "orange"; }
+      else if (agua < 25) { mensaje = "⚠️ Nivel de agua bajo"; color = "orange"; }
 
-      const alertaDiv = document.getElementById("alertas");
-      alertaDiv.textContent = mensaje;
-      alertaDiv.style.color = color;
+      document.getElementById("alertas").textContent = mensaje;
+      document.getElementById("alertas").style.color = color;
     }
 
+    // === ACTUALIZAR DATOS ===
     async function actualizar() {
       try {
         const res = await fetch("/api/ultimos");
@@ -134,14 +182,16 @@
             <td>${new Date(r.fecha).toLocaleString()}</td>
           </tr>
         `).join("");
+
       } catch(e){ console.error(e); }
     }
 
+    initChartAgua();
     initGauges();
     actualizar();
     setInterval(actualizar, 1000);
 
-    // EXPORTAR CSV/EXCEL
+    // === EXPORT CSV/EXCEL ===
     document.getElementById('exportCsv').addEventListener('click', () => exportData('csv'));
     document.getElementById('exportExcel').addEventListener('click', () => exportData('excel'));
 
@@ -179,6 +229,8 @@
   </script>
 </body>
 </html>
+
+
 
 
 
