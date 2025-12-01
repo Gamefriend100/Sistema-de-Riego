@@ -21,7 +21,9 @@
     thead th { background-color:#006400; color:white; }
     #registro { width:95%; margin:0.5rem auto; padding:0.5rem; background:white; border-radius:5px; box-shadow:0 0 5px rgba(0,0,0,0.2); }
     #registro h2 { margin-top:0; font-size:1rem; }
-    #registro a.telegram-btn { display:block; text-align:center; padding:0.4rem; background:#0088cc; color:white; text-decoration:none; border-radius:5px; margin-top:0.3rem; font-weight:bold; font-size:0.9rem; }
+    
+    /* Botón de Telegram eliminado → se elimina la clase */
+    
     #export-buttons { text-align:center; margin:1rem 0; }
     #export-buttons button { margin:0 0.3rem; padding:0.4rem 0.8rem; font-size:0.9rem; border:none; border-radius:5px; background:#2c3e50; color:white; cursor:pointer; }
     #export-buttons button:hover { background:#1a252f; }
@@ -36,8 +38,7 @@
 
   <section id="registro">
     <h2>Registro de Alertas</h2>
-    <label>Telegram:</label>
-    <a class="telegram-btn" href="https://t.me/SistemaRiego593_bot" target="_blank">Abrir bot de Telegram</a>
+    <!-- Botón de Telegram eliminado -->
   </section>
 
   <section class="gauges">
@@ -71,7 +72,7 @@
   </section>
 
   <script>
-    // Función para degradado de color
+    // Función de colores
     function getColorCustom(value, max, type) {
       const percent = Math.min(Math.max(value / max, 0), 1);
       switch(type) {
@@ -84,29 +85,26 @@
     }
 
     let gSuelo, gAgua, gTemp, gHum;
+
     function initGauges() {
-      gSuelo = new JustGage({ id:"gauge_suelo", value:0, min:0, max:100, label:"%", valueFontColor:"#000", labelFontColor:"#000", levelColors:["#8B4513"] });
-      gAgua  = new JustGage({ id:"gauge_agua", value:0, min:0, max:100, label:"%", valueFontColor:"#000", labelFontColor:"#000", levelColors:["#007BFF"] });
-      gTemp  = new JustGage({ id:"gauge_temp", value:0, min:0, max:60, label:"°C", valueFontColor:"#000", labelFontColor:"#000", levelColors:["#FFA500"] });
-      gHum   = new JustGage({ id:"gauge_hum", value:0, min:0, max:100, label:"%", valueFontColor:"#000", labelFontColor:"#000", levelColors:["#0080FF"] });
+      gSuelo = new JustGage({ id:"gauge_suelo", value:0, min:0, max:100, label:"%" });
+      gAgua  = new JustGage({ id:"gauge_agua",  value:0, min:0, max:100, label:"%" });
+      gTemp  = new JustGage({ id:"gauge_temp",  value:0, min:0, max:60,  label:"°C" });
+      gHum   = new JustGage({ id:"gauge_hum",   value:0, min:0, max:100, label:"%" });
     }
 
     function actualizarGauges(suelo, agua, temp, hum) {
-      gSuelo.config.levelColors = [getColorCustom(suelo, 100, "suelo")];
-      gAgua.config.levelColors  = [getColorCustom(agua, 100, "agua")];
-      gTemp.config.levelColors  = [getColorCustom(temp, 60, "temp")];
-      gHum.config.levelColors   = [getColorCustom(hum, 100, "hum")];
-
-      gSuelo.refresh(Number(suelo)||0);
-      gAgua.refresh(Number(agua)||0);
-      gTemp.refresh(Number(temp)||0);
-      gHum.refresh(Number(hum)||0);
+      gSuelo.refresh(Number(suelo) || 0);
+      gAgua.refresh(Number(agua) || 0);
+      gTemp.refresh(Number(temp) || 0);
+      gHum.refresh(Number(hum) || 0);
 
       let mensaje = "✔️ Todo en rango";
       let color = "#228B22";
-      if (suelo < 25 && agua < 25) { mensaje = "⚠️ Bajo nivel de agua y suelo seco"; color = "red"; }
-      else if (suelo < 25) { mensaje = "⚠️ Humedad del suelo baja"; color = "orange"; }
-      else if (agua < 25) { mensaje = "⚠️ Nivel de agua bajo"; color = "orange"; }
+
+      if (suelo < 25 && agua < 25) { mensaje="⚠️ Bajo nivel de agua y suelo seco"; color="red"; }
+      else if (suelo < 25) { mensaje="⚠️ Humedad del suelo baja"; color="orange"; }
+      else if (agua < 25) { mensaje="⚠️ Nivel de agua bajo"; color="orange"; }
 
       const alertaDiv = document.getElementById("alertas");
       alertaDiv.textContent = mensaje;
@@ -143,13 +141,13 @@
     actualizar();
     setInterval(actualizar, 1000);
 
-    // === EXPORT CSV/EXCEL ===
+    // EXPORTAR CSV/EXCEL
     document.getElementById('exportCsv').addEventListener('click', () => exportData('csv'));
     document.getElementById('exportExcel').addEventListener('click', () => exportData('excel'));
 
     async function exportData(type) {
       try {
-        const res = await fetch("/api/ultimos"); // Reutiliza endpoint de últimos registros
+        const res = await fetch("/api/ultimos");
         const data = await res.json();
 
         if(type === 'csv') {
@@ -181,5 +179,6 @@
   </script>
 </body>
 </html>
+
 
 
