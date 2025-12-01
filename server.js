@@ -26,7 +26,8 @@ const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
 
 // ----------------- TELEGRAM -----------------
-const bot = new TelegramBot(process.env.TELEGRAM_TOKEN);
+// 🔥 FIX IMPORTANTE → Habilita webhook interno
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { webHook: true });
 
 // Mongoose connection
 mongoose.connect(process.env.MONGO_URI)
@@ -283,3 +284,4 @@ app.get("/api/status", async (req,res)=>{
 // ----------------- SERVIDOR -----------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+
