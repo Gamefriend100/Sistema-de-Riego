@@ -34,17 +34,18 @@
     <p id="status"></p>
   </header>
 
-  <!-- HISTÓRICO NIVEL DE AGUA -->
-  <section style="width:95%; margin:1rem auto; background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
-    <h2 style="text-align:center;">Histórico del Nivel de Agua</h2>
-    <canvas id="histAgua" height="120"></canvas>
-  </section>
-
+  <!-- GAUGES -->
   <section class="gauges">
     <div class="gauge-container"><h3>Humedad Suelo</h3><div id="gauge_suelo"></div></div>
     <div class="gauge-container"><h3>Nivel Agua</h3><div id="gauge_agua"></div></div>
     <div class="gauge-container"><h3>Temperatura</h3><div id="gauge_temp"></div></div>
     <div class="gauge-container"><h3>Humedad Aire</h3><div id="gauge_hum"></div></div>
+  </section>
+
+  <!-- HISTÓRICO NIVEL DE AGUA (movido abajo de las gráficas) -->
+  <section style="width:95%; margin:1rem auto; background:white; padding:1rem; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+    <h2 style="text-align:center;">Histórico del Nivel de Agua</h2>
+    <canvas id="histAgua" height="120"></canvas>
   </section>
 
   <div id="alertas"></div>
