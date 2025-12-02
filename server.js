@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import twilio from "twilio";
 import { Parser } from "@json2csv/plainjs";
-import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -25,37 +24,12 @@ const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
 
-// ----------------- TELEGRAM (sin webhooks, solo HTTPS) -----------------
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
-
-async function enviarTelegram(mensaje) {
-  const chats = await Telegram.find();
-  for (const c of chats) {
-    try {
-      await fetch(TELEGRAM_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: c.chatId,
-          text: mensaje,
-          parse_mode: "HTML"
-        })
-      });
-
-      console.log(`📨 Telegram enviado a ${c.chatId}`);
-    } catch (err) {
-      console.error("❌ Error Telegram:", err);
-    }
-  }
-}
-
-// ----------------- MongoDB -----------------
+// ----------------- MONGO DB -----------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.log("Error Mongo:", err));
 
-// ----------------- Schemas -----------------
+// ----------------- SCHEMAS -----------------
 const RegistroSchema = new mongoose.Schema({
   suelo: Number,
   agua: Number,
@@ -78,14 +52,87 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
 
+// ----------------- FUNCION: ENVIAR TELEGRAM -----------------
+async function enviarTelegram(mensaje) {
+  const token = process.env.TELEGRAM_TOKEN;
+  const chats = await Telegram.find();
+
+  for (const c of chats) {
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: c.chatId,
+          text: mensaje,
+          parse_mode: "HTML"
+        })
+      });
+
+      console.log(`Enviado Telegram a ${c.chatId}`);
+    } catch (err) {
+      console.error("Error enviando Telegram:", err);
+    }
+  }
+}
+
+// ----------------- TELEGRAM: LONG POLLING SIN CHAT ID -----------------
+async function telegramLongPolling() {
+  const token = process.env.TELEGRAM_TOKEN;
+  let offset = 0;
+
+  console.log("📡 Telegram Long Polling iniciado...");
+
+  while (true) {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${token}/getUpdates?offset=${offset}&timeout=20`
+      );
+
+      const data = await res.json();
+
+      if (data.result.length > 0) {
+        for (const update of data.result) {
+          offset = update.update_id + 1;
+
+          if (!update.message) continue;
+
+          const chatId = update.message.chat.id.toString();
+          const texto = update.message.text || "";
+
+          let existe = await Telegram.findOne({ chatId });
+          if (!existe) {
+            await Telegram.create({ chatId });
+            console.log(`🆕 Nuevo Telegram registrado: ${chatId}`);
+
+            // Mensaje de bienvenida
+            await enviarTelegram("🌱 Te has suscrito a las alertas del sistema de riego.");
+          }
+
+          // Comando /start
+          if (texto === "/start") {
+            await enviarTelegram("✔ Ya estás registrado para recibir alertas.");
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error Long Polling:", err);
+    }
+
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
+// iniciar en segundo plano
+telegramLongPolling();
+
 // ----------------- STATIC -----------------
 app.use(express.static(path.join(__dirname, "public")));
-
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// ----------------- EMAIL -----------------
+// ----------------- EMAILS -----------------
 app.post("/api/setEmail", async (req, res) => {
   try {
     const { email } = req.body;
@@ -101,23 +148,7 @@ app.post("/api/setEmail", async (req, res) => {
   }
 });
 
-// ----------------- REGISTRAR TELEGRAM CHAT-ID -----------------
-app.post("/api/setTelegram", async (req, res) => {
-  try {
-    const { chatId } = req.body;
-    if (!chatId) return res.status(400).json({ ok:false, msg:"Chat ID requerido" });
-
-    const existe = await Telegram.findOne({ chatId });
-    if (existe) return res.json({ ok:false, msg:"Telegram ya registrado" });
-
-    await Telegram.create({ chatId });
-    res.json({ ok:true, msg:"Telegram registrado correctamente" });
-  } catch(err){
-    res.status(500).json({ ok:false, msg:"Error al registrar Telegram", err:String(err) });
-  }
-});
-
-// ----------------- ESP32 DATOS -----------------
+// ----------------- RECIBIR DATOS ESP32 -----------------
 app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
@@ -131,7 +162,7 @@ app.post("/api/datos", async (req, res) => {
   }
 });
 
-// ----------------- ULTIMOS -----------------
+// ----------------- ULTIMOS REGISTROS -----------------
 app.get("/api/ultimos", async (req,res)=>{
   try {
     const registros = await Registro.find().sort({ fecha:-1 }).limit(10);
@@ -178,7 +209,7 @@ app.post("/api/alertas", async (req,res)=>{
     else if(tipo==="suelo_seco") mensaje="⚠ El suelo está seco.";
     else mensaje="⚠ Alerta desconocida";
 
-    // Emails
+    // Email
     const emails = await Email.find();
     if (emails.length){
       const lista = emails.map(e=>e.email);
@@ -208,7 +239,7 @@ app.post("/api/alertas", async (req,res)=>{
       body: mensaje
     });
 
-    // Telegram sin webhooks
+    // Telegram
     await enviarTelegram(mensaje);
 
     res.json({ ok:true, msg:"Alertas enviadas" });
@@ -232,9 +263,10 @@ app.get("/api/status", async (req,res)=>{
   }
 });
 
-// ----------------- SERVER -----------------
+// ----------------- SERVIDOR -----------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, ()=>console.log("Servidor en puerto", PORT));
+app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+
 
 
 
