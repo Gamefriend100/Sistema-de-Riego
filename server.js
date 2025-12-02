@@ -10,7 +10,7 @@ import { Parser } from "@json2csv/plainjs";
 
 dotenv.config();
 
-// Fix __dirname
+// ----------------- FIX __dirname -----------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -24,7 +24,7 @@ const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
 
-// ----------------- MONGO DB -----------------
+// ----------------- MONGO -----------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.log("Error Mongo:", err));
@@ -39,12 +39,12 @@ const RegistroSchema = new mongoose.Schema({
 });
 
 const EmailSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, unique: true },
   fecha: { type: Date, default: Date.now }
 });
 
 const TelegramSchema = new mongoose.Schema({
-  chatId: { type: String, required: true, unique: true },
+  chatId: { type: String, unique: true },
   fecha: { type: Date, default: Date.now }
 });
 
@@ -52,7 +52,7 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
 
-// ----------------- FUNCION: ENVIAR TELEGRAM -----------------
+// ----------------- ENVIAR MENSAJE TELEGRAM -----------------
 async function enviarTelegram(mensaje) {
   const token = process.env.TELEGRAM_TOKEN;
   const chats = await Telegram.find();
@@ -69,19 +69,19 @@ async function enviarTelegram(mensaje) {
         })
       });
 
-      console.log(`Enviado Telegram a ${c.chatId}`);
+      console.log(`Telegram enviado a ${c.chatId}`);
     } catch (err) {
       console.error("Error enviando Telegram:", err);
     }
   }
 }
 
-// ----------------- TELEGRAM: LONG POLLING SIN CHAT ID -----------------
+// ----------------- TELEGRAM LONG POLLING -----------------
 async function telegramLongPolling() {
   const token = process.env.TELEGRAM_TOKEN;
   let offset = 0;
 
-  console.log("📡 Telegram Long Polling iniciado...");
+  console.log("📡 Long Polling Telegram iniciado...");
 
   while (true) {
     try {
@@ -90,6 +90,13 @@ async function telegramLongPolling() {
       );
 
       const data = await res.json();
+
+      // Protección: evitar data.result undefined
+      if (!data || !Array.isArray(data.result)) {
+        console.log("Sin mensajes nuevos...");
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
 
       if (data.result.length > 0) {
         for (const update of data.result) {
@@ -101,15 +108,15 @@ async function telegramLongPolling() {
           const texto = update.message.text || "";
 
           let existe = await Telegram.findOne({ chatId });
+
           if (!existe) {
             await Telegram.create({ chatId });
-            console.log(`🆕 Nuevo Telegram registrado: ${chatId}`);
 
-            // Mensaje de bienvenida
+            console.log(`🆕 Nuevo usuario Telegram: ${chatId}`);
+
             await enviarTelegram("🌱 Te has suscrito a las alertas del sistema de riego.");
           }
 
-          // Comando /start
           if (texto === "/start") {
             await enviarTelegram("✔ Ya estás registrado para recibir alertas.");
           }
@@ -123,7 +130,7 @@ async function telegramLongPolling() {
   }
 }
 
-// iniciar en segundo plano
+// Iniciar long polling
 telegramLongPolling();
 
 // ----------------- STATIC -----------------
@@ -144,7 +151,7 @@ app.post("/api/setEmail", async (req, res) => {
     await Email.create({ email });
     res.json({ ok: true, msg: "Email registrado" });
   } catch (err) {
-    res.status(500).json({ ok: false, msg: "Error", err: String(err) });
+    res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
@@ -153,66 +160,57 @@ app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
     if ([suelo, agua, temp, hum].includes(undefined))
-      return res.status(400).json({ ok:false, msg:"Faltan datos" });
+      return res.status(400).json({ ok: false, msg: "Faltan datos" });
 
     await Registro.create({ suelo, agua, temp, hum });
-    res.json({ ok:true });
-  } catch(err){
-    res.status(500).json({ ok:false, err:String(err) });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
 // ----------------- ULTIMOS REGISTROS -----------------
-app.get("/api/ultimos", async (req,res)=>{
-  try {
-    const registros = await Registro.find().sort({ fecha:-1 }).limit(10);
-    res.json(registros);
-  } catch(err){
-    res.status(500).json({ ok:false, err:String(err) });
-  }
+app.get("/api/ultimos", async (req, res) => {
+  const registros = await Registro.find().sort({ fecha: -1 }).limit(10);
+  res.json(registros);
 });
 
 // ----------------- EXPORT JSON -----------------
-app.get("/api/export", async (req,res)=>{
-  try {
-    const registros = await Registro.find().sort({ fecha:-1 });
-    res.json(registros);
-  } catch(err){
-    res.status(500).json({ ok:false, err:String(err) });
-  }
+app.get("/api/export", async (req, res) => {
+  const registros = await Registro.find().sort({ fecha: -1 });
+  res.json(registros);
 });
 
 // ----------------- EXPORT CSV -----------------
-app.get("/api/export/csv", async (req,res)=>{
+app.get("/api/export/csv", async (req, res) => {
   try {
-    const registros = await Registro.find().sort({ fecha:-1 });
-    const fields = ["suelo","agua","temp","hum","fecha"];
-    const parser = new Parser({ fields });
+    const registros = await Registro.find().sort({ fecha: -1 });
+    const parser = new Parser({ fields: ["suelo", "agua", "temp", "hum", "fecha"] });
     const csv = parser.parse(registros);
 
-    res.header("Content-Type","text/csv");
+    res.header("Content-Type", "text/csv");
     res.attachment("datos_sistema_riego.csv");
-    return res.send(csv);
-  } catch(err){
-    res.status(500).json({ ok:false, err:String(err) });
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
 // ----------------- ALERTAS GENERALES -----------------
-app.post("/api/alertas", async (req,res)=>{
+app.post("/api/alertas", async (req, res) => {
   try {
     const { tipo } = req.body;
-    let mensaje = "";
 
-    if(tipo==="suelo_y_agua_bajo") mensaje="⚠ Suelo seco + tanque bajo.";
-    else if(tipo==="nivel_agua_bajo") mensaje="⚠ Nivel de agua bajo.";
-    else if(tipo==="suelo_seco") mensaje="⚠ El suelo está seco.";
-    else mensaje="⚠ Alerta desconocida";
+    let mensaje = "⚠ Alerta del sistema";
+    if (tipo === "suelo_y_agua_bajo") mensaje = "⚠ Suelo seco + tanque bajo.";
+    if (tipo === "nivel_agua_bajo") mensaje = "⚠ Nivel de agua bajo.";
+    if (tipo === "suelo_seco") mensaje = "⚠ El suelo está seco.";
 
-    // Email
+    // Emails
     const emails = await Email.find();
-    if (emails.length){
-      const lista = emails.map(e=>e.email);
+    if (emails.length > 0) {
+      const lista = emails.map(e => e.email);
+
       const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 587,
@@ -220,14 +218,13 @@ app.post("/api/alertas", async (req,res)=>{
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
-        },
-        tls: { rejectUnauthorized: false }
+        }
       });
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         bcc: lista,
-        subject: "ALERTA SISTEMA DE RIEGO",
+        subject: "Alerta Sistema de Riego",
         text: mensaje
       });
     }
@@ -242,30 +239,17 @@ app.post("/api/alertas", async (req,res)=>{
     // Telegram
     await enviarTelegram(mensaje);
 
-    res.json({ ok:true, msg:"Alertas enviadas" });
-  } catch(err){
+    res.json({ ok: true, msg: "Alertas enviadas" });
+  } catch (err) {
     console.log("ERROR ALERTAS:", err);
-    res.status(500).json({ ok:false, err:String(err) });
-  }
-});
-
-// ----------------- STATUS -----------------
-app.get("/api/status", async (req,res)=>{
-  try {
-    const last = await Registro.findOne().sort({ fecha:-1 });
-    res.json({
-      ok:true,
-      mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      lastRegistro: last
-    });
-  } catch(err){
-    res.status(500).json({ ok:false, err:String(err) });
+    res.status(500).json({ ok: false, err: String(err) });
   }
 });
 
 // ----------------- SERVIDOR -----------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+app.listen(PORT, () => console.log("Servidor activo en puerto", PORT));
+
 
 
 
