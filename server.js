@@ -7,11 +7,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import twilio from "twilio";
 import { Parser } from "@json2csv/plainjs";
-import TelegramBot from "node-telegram-bot-api";
+import fetch from "node-fetch";
 
 dotenv.config();
 
-// Fix para __dirname en módulos ES
+// Fix __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -25,18 +25,37 @@ const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
 const TWILIO_WHATSAPP_TO = "whatsapp:+5214381318237";
 
-// ----------------- TELEGRAM -----------------
-// ✅ FIX FINAL — Webhook funcional en Render
-const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, {
-  webHook: { port: false }
-});
+// ----------------- TELEGRAM (sin webhooks, solo HTTPS) -----------------
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
-// Conexión a MongoDB
+async function enviarTelegram(mensaje) {
+  const chats = await Telegram.find();
+  for (const c of chats) {
+    try {
+      await fetch(TELEGRAM_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: c.chatId,
+          text: mensaje,
+          parse_mode: "HTML"
+        })
+      });
+
+      console.log(`📨 Telegram enviado a ${c.chatId}`);
+    } catch (err) {
+      console.error("❌ Error Telegram:", err);
+    }
+  }
+}
+
+// ----------------- MongoDB -----------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado"))
   .catch(err => console.log("Error Mongo:", err));
 
-// ----------------- SCHEMAS -----------------
+// ----------------- Schemas -----------------
 const RegistroSchema = new mongoose.Schema({
   suelo: Number,
   agua: Number,
@@ -59,19 +78,6 @@ const Registro = mongoose.model("Registro", RegistroSchema);
 const Email = mongoose.model("Email", EmailSchema);
 const Telegram = mongoose.model("Telegram", TelegramSchema);
 
-// ----------------- FUNCION: ENVIAR TELEGRAM -----------------
-async function enviarTelegram(mensaje) {
-  const chats = await Telegram.find();
-  for (const c of chats) {
-    try {
-      await bot.sendMessage(c.chatId.toString(), mensaje);
-      console.log(`Enviado Telegram a ${c.chatId}`);
-    } catch (err) {
-      console.error("Error enviando Telegram:", err);
-    }
-  }
-}
-
 // ----------------- STATIC -----------------
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -79,7 +85,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// ----------------- EMAILS -----------------
+// ----------------- EMAIL -----------------
 app.post("/api/setEmail", async (req, res) => {
   try {
     const { email } = req.body;
@@ -95,26 +101,7 @@ app.post("/api/setEmail", async (req, res) => {
   }
 });
 
-// ----------------- TELEGRAM WEBHOOK ENDPOINT -----------------
-app.post(`/bot${process.env.TELEGRAM_TOKEN}`, (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-
-// ----------------- TELEGRAM EVENTOS -----------------
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id.toString();
-
-  const existe = await Telegram.findOne({ chatId });
-  if (!existe) {
-    await Telegram.create({ chatId });
-    await bot.sendMessage(chatId, "🌱 ¡Te has suscrito a las alertas del sistema de riego!");
-  } else {
-    await bot.sendMessage(chatId, "✔ Ya estabas registrado.");
-  }
-});
-
-// ----------------- GUARDAR CHAT DE TELEGRAM MANUALMENTE -----------------
+// ----------------- REGISTRAR TELEGRAM CHAT-ID -----------------
 app.post("/api/setTelegram", async (req, res) => {
   try {
     const { chatId } = req.body;
@@ -130,7 +117,7 @@ app.post("/api/setTelegram", async (req, res) => {
   }
 });
 
-// ----------------- RECIBIR DATOS ESP32 -----------------
+// ----------------- ESP32 DATOS -----------------
 app.post("/api/datos", async (req, res) => {
   try {
     const { suelo, agua, temp, hum } = req.body;
@@ -144,7 +131,7 @@ app.post("/api/datos", async (req, res) => {
   }
 });
 
-// ----------------- ULTIMOS REGISTROS -----------------
+// ----------------- ULTIMOS -----------------
 app.get("/api/ultimos", async (req,res)=>{
   try {
     const registros = await Registro.find().sort({ fecha:-1 }).limit(10);
@@ -221,51 +208,13 @@ app.post("/api/alertas", async (req,res)=>{
       body: mensaje
     });
 
-    // Telegram
+    // Telegram sin webhooks
     await enviarTelegram(mensaje);
 
     res.json({ ok:true, msg:"Alertas enviadas" });
   } catch(err){
     console.log("ERROR ALERTAS:", err);
     res.status(500).json({ ok:false, err:String(err) });
-  }
-});
-
-// ----------------- TEST SMTP -----------------
-app.get("/api/test-smtp", async (req, res) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      tls: { rejectUnauthorized: false }
-    });
-
-    transporter.verify((error, success) => {
-      if(error){
-        return res.status(500).json({ ok:false, msg:"Error al conectar SMTP", error:String(error) });
-      } else {
-        return res.json({ ok:true, msg:"SMTP OK" });
-      }
-    });
-
-  } catch(err){
-    res.status(500).json({ ok:false, msg:"Error SMTP", error:String(err) });
-  }
-});
-
-// ----------------- WEBHOOK para TELEGRAM -----------------
-app.get("/setWebhook", async (req, res) => {
-  const url = `https://${req.get("host")}/bot${process.env.TELEGRAM_TOKEN}`;
-  try {
-    await bot.setWebHook(url);
-    res.send("Webhook configurado: " + url);
-  } catch (err) {
-    res.send("Error configurando webhook");
   }
 });
 
@@ -283,8 +232,9 @@ app.get("/api/status", async (req,res)=>{
   }
 });
 
-// ----------------- SERVIDOR -----------------
+// ----------------- SERVER -----------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, ()=>console.log("Servidor corriendo en puerto", PORT));
+app.listen(PORT, ()=>console.log("Servidor en puerto", PORT));
+
 
 
