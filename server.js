@@ -91,7 +91,6 @@ async function telegramLongPolling() {
 
       const data = await res.json();
 
-      // Protección: evitar data.result undefined
       if (!data || !Array.isArray(data.result)) {
         console.log("Sin mensajes nuevos...");
         await new Promise(r => setTimeout(r, 1500));
@@ -101,7 +100,6 @@ async function telegramLongPolling() {
       if (data.result.length > 0) {
         for (const update of data.result) {
           offset = update.update_id + 1;
-
           if (!update.message) continue;
 
           const chatId = update.message.chat.id.toString();
@@ -111,9 +109,7 @@ async function telegramLongPolling() {
 
           if (!existe) {
             await Telegram.create({ chatId });
-
             console.log(`🆕 Nuevo usuario Telegram: ${chatId}`);
-
             await enviarTelegram("🌱 Te has suscrito a las alertas del sistema de riego.");
           }
 
@@ -181,6 +177,31 @@ app.get("/api/export", async (req, res) => {
   res.json(registros);
 });
 
+// ----------------- EXPORT JSON POR PERIODO -----------------
+app.get("/api/export/periodo", async (req, res) => {
+  try {
+    const { inicio, fin } = req.query;
+    if (!inicio || !fin)
+      return res.status(400).json({ ok: false, msg: "Debe enviar inicio y fin en formato dd/mm/aaaa" });
+
+    const [di, mi, yi] = inicio.split("/");
+    const [df, mf, yf] = fin.split("/");
+
+    const fechaInicio = new Date(`${yi}-${mi}-${di}T00:00:00`);
+    const fechaFin = new Date(`${yf}-${mf}-${df}T23:59:59`);
+
+    const registros = await Registro.find({
+      fecha: { $gte: fechaInicio, $lte: fechaFin }
+    }).sort({ fecha: -1 });
+
+    res.json(registros);
+
+  } catch (err) {
+    console.error("Error exportando por periodo:", err);
+    res.status(500).json({ ok: false, err: String(err) });
+  }
+});
+
 // ----------------- EXPORT CSV -----------------
 app.get("/api/export/csv", async (req, res) => {
   try {
@@ -192,6 +213,36 @@ app.get("/api/export/csv", async (req, res) => {
     res.attachment("datos_sistema_riego.csv");
     res.send(csv);
   } catch (err) {
+    res.status(500).json({ ok: false, err: String(err) });
+  }
+});
+
+// ----------------- EXPORT CSV POR PERIODO -----------------
+app.get("/api/export/csv/periodo", async (req, res) => {
+  try {
+    const { inicio, fin } = req.query;
+    if (!inicio || !fin)
+      return res.status(400).json({ ok: false, msg: "Debe enviar inicio y fin en formato dd/mm/aaaa" });
+
+    const [di, mi, yi] = inicio.split("/");
+    const [df, mf, yf] = fin.split("/");
+
+    const fechaInicio = new Date(`${yi}-${mi}-${di}T00:00:00`);
+    const fechaFin = new Date(`${yf}-${mf}-${df}T23:59:59`);
+
+    const registros = await Registro.find({
+      fecha: { $gte: fechaInicio, $lte: fechaFin }
+    }).sort({ fecha: -1 });
+
+    const parser = new Parser({ fields: ["suelo", "agua", "temp", "hum", "fecha"] });
+    const csv = parser.parse(registros);
+
+    res.header("Content-Type", "text/csv");
+    res.attachment(`export_${inicio}_al_${fin}.csv`);
+    res.send(csv);
+
+  } catch (err) {
+    console.error("Error exportando CSV por periodo:", err);
     res.status(500).json({ ok: false, err: String(err) });
   }
 });
@@ -249,6 +300,7 @@ app.post("/api/alertas", async (req, res) => {
 // ----------------- SERVIDOR -----------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Servidor activo en puerto", PORT));
+
 
 
 
