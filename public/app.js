@@ -1,7 +1,7 @@
 const API = "https://sistema-de-riego-w2uh.onrender.com";
 
 window.onload = function() {
-  // Inicializar gauges
+  // ---------- 🔹 GAUGES ----------
   let gSuelo, gAgua, gTemp, gHum;
 
   function initGauges() {
@@ -73,6 +73,7 @@ window.onload = function() {
     gHum.refresh(Number(hum) || 0);
   }
 
+  // ---------- 🔹 ACTUALIZAR DATOS ----------
   async function actualizar() {
     try {
       const res = await fetch(`${API}/api/ultimos`);
@@ -110,12 +111,11 @@ window.onload = function() {
     }
   }
 
-  // Descargar CSV completo
+  // ---------- 🔹 EXPORTACIONES ----------
   function exportCSV() {
     window.location.href = `${API}/api/export/csv`;
   }
 
-  // ---------- 🔹 NUEVO: Exportar por periodo ----------
   function exportPorPeriodo() {
     const inicio = document.getElementById("fechaInicio").value;
     const fin = document.getElementById("fechaFin").value;
@@ -125,7 +125,7 @@ window.onload = function() {
       return;
     }
 
-    // convertir yyyy-mm-dd → dd/mm/yyyy
+    // Convertir yyyy-mm-dd → dd/mm/yyyy
     const convert = d => {
       const [y, m, d2] = d.split("-");
       return `${d2}/${m}/${y}`;
@@ -137,7 +137,7 @@ window.onload = function() {
     window.location.href = `${API}/api/export/periodo?inicio=${ini}&fin=${fi}`;
   }
 
-  // ---------- 🔹 NUEVO: Crear inputs y botones ----------
+  // ---------- 🔹 CREAR BOTONES DINÁMICOS ----------
   const cont = document.createElement("div");
   cont.style.textAlign = "center";
   cont.style.margin = "1rem";
@@ -154,7 +154,6 @@ window.onload = function() {
 
   document.getElementById("btnExportPeriodo").onclick = exportPorPeriodo;
 
-  // Botón de exportación completa
   const exportBtn = document.createElement("button");
   exportBtn.textContent = "Exportar CSV completo";
   exportBtn.style.display = "block";
@@ -164,11 +163,12 @@ window.onload = function() {
   exportBtn.onclick = exportCSV;
   document.body.insertBefore(exportBtn, document.getElementById("registro").nextSibling);
 
-  // Inicializar
+  // ---------- 🔹 INICIALIZAR ----------
   initGauges();
   actualizar();
   setInterval(actualizar, 3000);
 };
+
 
 
 
