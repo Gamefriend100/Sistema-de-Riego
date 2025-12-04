@@ -116,7 +116,7 @@ window.onload = function() {
     window.location.href = `${API}/api/export/csv`;
   }
 
-  function exportPorPeriodo() {
+  async function exportPorPeriodo() {
     const inicio = document.getElementById("fechaInicio").value;
     const fin = document.getElementById("fechaFin").value;
 
@@ -125,16 +125,54 @@ window.onload = function() {
       return;
     }
 
-    // Convertir yyyy-mm-dd → dd/mm/yyyy
-    const convert = d => {
-      const [y, m, d2] = d.split("-");
-      return `${d2}/${m}/${y}`;
-    };
+    try {
+      // Traer todos los registros desde la API
+      const res = await fetch(`${API}/api/export`);
+      let data = await res.json();
 
-    const ini = convert(inicio);
-    const fi = convert(fin);
+      if (!Array.isArray(data) || data.length === 0) {
+        alert("⚠ No hay registros disponibles");
+        return;
+      }
 
-    window.location.href = `${API}/api/export/periodo?inicio=${ini}&fin=${fi}`;
+      const inicioMs = new Date(inicio).getTime();
+      const finMs = new Date(fin).getTime();
+
+      // Filtrar por periodo
+      data = data.filter(r => {
+        const fechaMs = new Date(r.fecha).getTime();
+        return fechaMs >= inicioMs && fechaMs <= finMs;
+      });
+
+      if (!data.length) {
+        alert("⚠ No hay registros en ese periodo");
+        return;
+      }
+
+      // Limpiar campos innecesarios
+      data = data.map(d => {
+        const obj = { ...d };
+        delete obj._id;
+        delete obj.__v;
+        return obj;
+      });
+
+      // Generar CSV
+      const header = Object.keys(data[0]).join(",");
+      const rows = data.map(r => Object.values(r).join(","));
+      const csv = [header, ...rows].join("\n");
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `export_${inicio}_a_${fin}.csv`;
+      a.click();
+
+      alert("✔ Exportación por periodo completada");
+
+    } catch(e) {
+      console.error("Error exportando por periodo:", e);
+      alert("❌ Error exportando por periodo");
+    }
   }
 
   // ---------- 🔹 CREAR BOTONES DINÁMICOS ----------
@@ -168,6 +206,7 @@ window.onload = function() {
   actualizar();
   setInterval(actualizar, 3000);
 };
+
 
 
 
