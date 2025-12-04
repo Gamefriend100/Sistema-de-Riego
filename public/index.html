@@ -21,7 +21,7 @@
     th, td { padding:0.3rem; text-align:center; border:1px solid #ccc; }
     thead th { background-color:#006400; color:white; }
     #export-buttons { text-align:center; margin:1rem 0; }
-    #export-buttons button { margin:0 0.3rem; padding:0.4rem 0.8rem; font-size:0.9rem; border:none; border-radius:5px; background:#2c3e50; color:white; cursor:pointer; }
+    #export-buttons button { margin:0.3rem; padding:0.4rem 0.8rem; font-size:0.9rem; border:none; border-radius:5px; background:#2c3e50; color:white; cursor:pointer; }
     #export-buttons button:hover { background:#1a252f; }
     @media (max-width:600px) { .gauge-container { flex:1 1 90%; max-width:90%; } }
   </style>
@@ -49,9 +49,16 @@
   <div id="export-buttons">
     <button id="exportCsv">Exportar 10 registros CSV</button>
     <button id="exportExcel">Exportar 10 registros Excel</button>
-
-    <!-- NUEVO BOTÓN -->
     <button id="exportFull">Exportar CSV y Excel (Completo)</button>
+
+    <!-- NUEVO: EXPORTAR POR PERIODO -->
+    <div style="margin-top:1rem; background:white; padding:0.5rem; border-radius:6px;">
+      <label>Desde:</label>
+      <input type="date" id="fechaInicio">
+      <label>Hasta:</label>
+      <input type="date" id="fechaFin">
+      <button id="exportRange">Exportar por periodo</button>
+    </div>
   </div>
 
   <section>
@@ -185,6 +192,7 @@
     document.getElementById('exportCsv').addEventListener('click', () => exportData('csv'));
     document.getElementById('exportExcel').addEventListener('click', () => exportData('excel'));
     document.getElementById('exportFull').addEventListener('click', exportFull);
+    document.getElementById('exportRange').addEventListener('click', exportRange);
 
     /* Exporta SOLO los últimos 10 */
     async function exportData(type) {
@@ -209,11 +217,40 @@
 
         const csv = convertToCSV(data);
         downloadFile(csv, 'datos_completos.csv', 'text/csv');
-
         exportExcelFile(data, 'datos_completos.xlsx');
 
         alert("✔ Exportación completa realizada");
       } catch (e) { console.error(e); }
+    }
+
+    /* NUEVO: EXPORTAR POR PERIODO */
+    async function exportRange() {
+      const inicio = document.getElementById("fechaInicio").value;
+      const fin = document.getElementById("fechaFin").value;
+
+      if (!inicio || !fin) {
+        alert("Selecciona fecha inicio y fin");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/export-range?inicio=${inicio}&fin=${fin}`);
+        const data = cleanData(await res.json());
+
+        if (!data.length) {
+          alert("⚠ No hay registros en ese periodo");
+          return;
+        }
+
+        const csv = convertToCSV(data);
+        downloadFile(csv, `export_${inicio}_a_${fin}.csv`, 'text/csv');
+        exportExcelFile(data, `export_${inicio}_a_${fin}.xlsx`);
+
+        alert("✔ Exportación por periodo completada");
+      } catch (e) {
+        console.error(e);
+        alert("❌ Error exportando por periodo");
+      }
     }
 
     function cleanData(data) {
@@ -251,6 +288,7 @@
   </script>
 </body>
 </html>
+
 
 
 
