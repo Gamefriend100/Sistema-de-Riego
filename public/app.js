@@ -110,14 +110,53 @@ window.onload = function() {
     }
   }
 
-  // Función para descargar CSV desde el servidor
+  // Descargar CSV completo
   function exportCSV() {
     window.location.href = `${API}/api/export/csv`;
   }
 
-  // Agregar botón de exportación al DOM
+  // ---------- 🔹 NUEVO: Exportar por periodo ----------
+  function exportPorPeriodo() {
+    const inicio = document.getElementById("fechaInicio").value;
+    const fin = document.getElementById("fechaFin").value;
+
+    if (!inicio || !fin) {
+      alert("Seleccione ambas fechas");
+      return;
+    }
+
+    // convertir yyyy-mm-dd → dd/mm/yyyy
+    const convert = d => {
+      const [y, m, d2] = d.split("-");
+      return `${d2}/${m}/${y}`;
+    };
+
+    const ini = convert(inicio);
+    const fi = convert(fin);
+
+    window.location.href = `${API}/api/export/periodo?inicio=${ini}&fin=${fi}`;
+  }
+
+  // ---------- 🔹 NUEVO: Crear inputs y botones ----------
+  const cont = document.createElement("div");
+  cont.style.textAlign = "center";
+  cont.style.margin = "1rem";
+  cont.innerHTML = `
+    <label>Inicio:</label>
+    <input type="date" id="fechaInicio" style="margin:0 .5rem">
+    <label>Fin:</label>
+    <input type="date" id="fechaFin" style="margin:0 .5rem">
+    <button id="btnExportPeriodo" style="margin-left:1rem;padding:.5rem 1rem;">
+      Exportar CSV por periodo
+    </button>
+  `;
+  document.body.insertBefore(cont, document.getElementById("registro"));
+
+  document.getElementById("btnExportPeriodo").onclick = exportPorPeriodo;
+
+  // Botón de exportación completa
   const exportBtn = document.createElement("button");
-  exportBtn.textContent = "Exportar CSV";
+  exportBtn.textContent = "Exportar CSV completo";
   exportBtn.style.display = "block";
   exportBtn.style.margin = "1rem auto";
   exportBtn.style.padding = "0.5rem 1rem";
@@ -125,9 +164,11 @@ window.onload = function() {
   exportBtn.onclick = exportCSV;
   document.body.insertBefore(exportBtn, document.getElementById("registro").nextSibling);
 
-  // Inicializar gauges y actualizar datos
+  // Inicializar
   initGauges();
   actualizar();
   setInterval(actualizar, 3000);
 };
+
+
 
