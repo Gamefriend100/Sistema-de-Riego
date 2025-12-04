@@ -194,7 +194,6 @@
     document.getElementById('exportFull').addEventListener('click', exportFull);
     document.getElementById('exportRange').addEventListener('click', exportRange);
 
-    /* Exporta SOLO los últimos 10 */
     async function exportData(type) {
       try {
         const res = await fetch("/api/ultimos");
@@ -209,7 +208,6 @@
       } catch (e) { console.error(e); }
     }
 
-    /* Exporta TODOS los registros */
     async function exportFull() {
       try {
         const res = await fetch("/api/export");
@@ -223,8 +221,8 @@
       } catch (e) { console.error(e); }
     }
 
-    /* NUEVO: EXPORTAR POR PERIODO */
-    async function exportRange() {
+    /* === EXPORTAR POR PERIODO CORREGIDO === */
+    function exportRange() {
       const inicio = document.getElementById("fechaInicio").value;
       const fin = document.getElementById("fechaFin").value;
 
@@ -233,24 +231,17 @@
         return;
       }
 
-      try {
-        const res = await fetch(`/api/export-range?inicio=${inicio}&fin=${fin}`);
-        const data = cleanData(await res.json());
+      // Convertir yyyy-mm-dd → dd/mm/yyyy
+      const fixDate = d => {
+        const [y,m,day] = d.split("-");
+        return `${day}/${m}/${y}`;
+      };
 
-        if (!data.length) {
-          alert("⚠ No hay registros en ese periodo");
-          return;
-        }
+      const fechaInicio = fixDate(inicio);
+      const fechaFin = fixDate(fin);
 
-        const csv = convertToCSV(data);
-        downloadFile(csv, `export_${inicio}_a_${fin}.csv`, 'text/csv');
-        exportExcelFile(data, `export_${inicio}_a_${fin}.xlsx`);
-
-        alert("✔ Exportación por periodo completada");
-      } catch (e) {
-        console.error(e);
-        alert("❌ Error exportando por periodo");
-      }
+      // Descargar directamente desde servidor
+      window.location.href = `/api/export/csv/periodo?inicio=${fechaInicio}&fin=${fechaFin}`;
     }
 
     function cleanData(data) {
@@ -288,6 +279,7 @@
   </script>
 </body>
 </html>
+
 
 
 
