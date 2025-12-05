@@ -257,7 +257,52 @@ table td:last-child {
         height: 250px;
         margin-bottom: 40px; 
     }
+/* =================================================== */
+/* 📱 RESPONSIVE PARA TABLETS Y CELULARES */
+/* =================================================== */
+@media (max-width: 768px) {
+    .static-header {
+        flex-direction: column;
+        gap: .5rem;
+        padding: 10px;
+    }
+
+    .title-container h1 {
+        font-size: 1.5rem;
+    }
+
+    .logo {
+        width: 55px;
+        height: 55px;
+    }
+
+    .chart-section {
+        height: 260px;
+    }
+
+    td, th {
+        font-size: .75rem;
+        padding: 6px;
+    }
 }
+
+@media (max-width: 480px) {
+    .title-container h1 {
+        font-size: 1.2rem;
+        white-space: normal;
+    }
+
+    .gauge-wrapper {
+        max-width: 95%;
+    }
+
+    #export-buttons button {
+        width: 100%;
+        padding: .5rem;
+        font-size: .85rem;
+    }
+}
+
 
 
 
