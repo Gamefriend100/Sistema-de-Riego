@@ -9,27 +9,20 @@
   <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* Estilos mínimos para que funcione el JustGage y ajustes menores. */
-    body { margin:0; padding:0; } 
-    /* El fondo de alerta se ajusta para la paleta clara */
-    #alertas { width:90%; margin:1rem auto; padding:0.8rem; background-color: #ffffff; border-radius:8px; text-align:center; font-weight:bold; min-height:1.5em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #222; }
-    
-    .gauge-wrapper {
-      width: 250px; 
-      height: 250px;
-    }
-
+    body { margin:0; padding:0; }
+    #alertas { width:90%; margin:1rem auto; padding:0.8rem; background-color:#ffffff; border-radius:8px; text-align:center; font-weight:bold; min-height:1.5em; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#222; }
+    .gauge-wrapper { width:250px; height:250px; }
   </style>
 </head>
 <body>
   
   <header class="static-header">
     <div class="logo-container">
-      <img src="logo.png"class="logo">
+      <img src="logo.png" class="logo">
     </div>
     <div class="title-container">
       <h1>Sistema de Monitoreo y Riego Inteligente</h1>
@@ -44,20 +37,19 @@
       <div class="gauge-wrapper"><h3 class="gauge-title">Temperatura</h3><div id="gauge_temp"></div></div>
       <div class="gauge-wrapper"><h3 class="gauge-title">Humedad Ambiente</h3><div id="gauge_hum"></div></div>
     </section>
-  
+
     <section class="chart-section">
       <h2>Histórico del Nivel de Agua</h2>
       <canvas id="histAgua"></canvas>
     </section>
-  
+
     <div id="alertas"></div>
-  
+
+    <!-- 🔹 Único botón de exportación -->
     <div id="export-buttons">
-        <button id="exportCsv">Exportar CSV (Últimos)</button>
-        <button id="exportExcel">Exportar Excel (Últimos)</button>
       <button id="exportFull">Exportar CSV y Excel (Completo)</button>
     </div>
-  
+
     <section>
       <h2>Últimos 10 registros</h2>
       <table>
@@ -79,7 +71,6 @@
     // === HISTÓRICO DEL NIVEL DE AGUA ===
     let aguaHistory = [];
     let labelHistory = [];
-
     let ctxAgua;
     let chartAgua;
 
@@ -93,8 +84,8 @@
           datasets: [{
             label: "Nivel de Agua (%)",
             data: aguaHistory,
-            borderWidth: 3, 
-            borderColor: "#33b5a1", /* Color de acento */
+            borderWidth: 3,
+            borderColor: "#33b5a1",
             backgroundColor: "rgba(51,181,161,0.4)",
             fill: true,
             tension: 0.4
@@ -102,9 +93,9 @@
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false, 
+          maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y: { beginAtZero: true, max: 100 },
             x: { grid: { display: false } }
           },
           plugins: {
@@ -116,15 +107,9 @@
 
     function actualizarChartAgua(valorAgua) {
       const hora = new Date().toLocaleTimeString();
-
-      if (aguaHistory.length > 20) {
-        aguaHistory.shift();
-        labelHistory.shift();
-      }
-
+      if (aguaHistory.length > 20) { aguaHistory.shift(); labelHistory.shift(); }
       aguaHistory.push(valorAgua);
       labelHistory.push(hora);
-
       chartAgua.update();
     }
 
@@ -132,131 +117,67 @@
     let gSuelo, gAgua, gTemp, gHum;
 
     function initGauges() {
-      // Configuraciones base con colores y segmentos dinámicos
-      const gaugeOptions = (max, label) => ({ 
-          value: 0, 
-          min: 0, 
-          max: max, 
-          label: label,
-          startAnimationTime: 1000,
-          refreshAnimationTime: 1000,
-          donut: true, 
-          pointer: true,
-          valueFontColor: "#38761d", /* Valor en verde oscuro */
-          levelColors: ["#e74c3c", "#f1c40f", "#6aa84f"], 
-          customSectors: [{ 
-                color: "#e74c3c", // Rojo (Muy bajo)
-                lo: 0,
-                hi: max * 0.25
-            }, {
-                color: "#f1c40f", // Amarillo (Intermedio)
-                lo: max * 0.25,
-                hi: max * 0.65
-            }, {
-                color: "#6aa84f", // Verde (Alto)
-                lo: max * 0.65,
-                hi: max
-            }]
-      });
-      
-      const gaugeTempOptions = (max, label) => ({ 
-          ...gaugeOptions(max, label),
-          customSectors: [{ 
-                color: "#3498db", /* Azul (Frío) */
-                lo: 0,
-                hi: 15
-            }, {
-                color: "#6aa84f", /* Verde (Normal) */
-                lo: 15,
-                hi: 35
-            }, {
-                color: "#e74c3c", /* Rojo (Alto/Caliente) */
-                lo: 35,
-                hi: max
-            }],
-            levelColors: ["#3498db", "#6aa84f", "#e74c3c"]
+      const gaugeOptions = (max, label) => ({
+        value: 0, min: 0, max: max, label: label,
+        donut: true, pointer: true,
+        startAnimationTime: 1000, refreshAnimationTime: 1000,
+        valueFontColor: "#38761d",
+        customSectors: [
+          { color:"#e74c3c", lo:0, hi:max*0.25 },
+          { color:"#f1c40f", lo:max*0.25, hi:max*0.65 },
+          { color:"#6aa84f", lo:max*0.65, hi:max }
+        ]
       });
 
-      const gaugeHumOptions = (max, label) => ({ 
-          ...gaugeOptions(max, label),
-          customSectors: [{ 
-                color: "#e74c3c", /* Rojo (Seco) */
-                lo: 0,
-                hi: 30
-            }, {
-                color: "#6aa84f", /* Verde (Ideal) */
-                lo: 30,
-                hi: 70
-            }, {
-                color: "#3498db", /* Azul (Húmedo) */
-                lo: 70,
-                hi: max
-            }],
-            levelColors: ["#e74c3c", "#6aa84f", "#3498db"]
-      });
-
-      gSuelo = new JustGage({ id:"gauge_suelo", ...gaugeOptions(100, "%") });
-      gAgua  = new JustGage({ id:"gauge_agua", ...gaugeOptions(100, "%") });
-      gTemp  = new JustGage({ id:"gauge_temp", ...gaugeTempOptions(60, "°C") });
-      gHum   = new JustGage({ id:"gauge_hum", ...gaugeHumOptions(100, "%") });
+      gSuelo = new JustGage({ id:"gauge_suelo", ...gaugeOptions(100,"%") });
+      gAgua  = new JustGage({ id:"gauge_agua", ...gaugeOptions(100,"%") });
+      gTemp  = new JustGage({ id:"gauge_temp", ...gaugeOptions(60,"°C") });
+      gHum   = new JustGage({ id:"gauge_hum", ...gaugeOptions(100,"%") });
     }
 
     function actualizarGauges(suelo, agua, temp, hum) {
-      suelo = Number(suelo) || 0;
-      agua = Number(agua) || 0;
-      temp = Number(temp) || 0;
-      hum = Number(hum) || 0;
-
-      gSuelo.refresh(suelo);
-      gAgua.refresh(agua);
-      gTemp.refresh(temp);
-      gHum.refresh(hum);
+      gSuelo.refresh(Number(suelo)||0);
+      gAgua.refresh(Number(agua)||0);
+      gTemp.refresh(Number(temp)||0);
+      gHum.refresh(Number(hum)||0);
 
       actualizarChartAgua(agua);
 
-      let mensaje = "✔️ Todo en rango";
-      let color = "#38761d"; /* Verde Oscuro */
+      let mensaje="✔️ Todo en rango", color="#38761d";
+      if(suelo<25 && agua<25){ mensaje="🔴 Alerta: Bajo nivel de agua y suelo seco"; color="#e74c3c";}
+      else if(suelo<25){ mensaje="🟡 Advertencia: Humedad suelo baja"; color="#f1c40f";}
+      else if(agua<25){ mensaje="🟡 Advertencia: Nivel agua bajo"; color="#f1c40f";}
 
-      if (suelo < 25 && agua < 25) { mensaje = "🔴 Alerta: Bajo nivel de agua y suelo seco"; color = "#e74c3c"; } 
-      else if (suelo < 25) { mensaje = "🟡 Advertencia: Humedad del suelo baja"; color = "#f1c40f"; } 
-      else if (agua < 25) { mensaje = "🟡 Advertencia: Nivel de agua bajo"; color = "#f1c40f"; } 
-
-      document.getElementById("alertas").textContent = mensaje;
-      document.getElementById("alertas").style.color = color;
+      document.getElementById("alertas").textContent=mensaje;
+      document.getElementById("alertas").style.color=color;
     }
 
     async function actualizar() {
-      try {
-        const res = await fetch("/api/ultimos"); 
-        const data = await res.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-          document.getElementById("tabla").innerHTML = `<tr><td colspan="5">No hay registros</td></tr>`;
-          actualizarGauges(0,0,0,0);
-          return;
+      try{
+        const res=await fetch("/api/ultimos");
+        const data=await res.json();
+        if(!Array.isArray(data) || data.length===0){
+          document.getElementById("tabla").innerHTML="<tr><td colspan='5'>No hay registros</td></tr>";
+          actualizarGauges(0,0,0,0); return;
         }
 
-        const ultimo = data[0];
-        actualizarGauges(ultimo.suelo, ultimo.agua, ultimo.temp, ultimo.hum);
+        const ultimo=data[0];
+        actualizarGauges(ultimo.suelo,ultimo.agua,ultimo.temp,ultimo.hum);
 
-        document.getElementById("tabla").innerHTML = data.map((r, index) => {
-           const rowClass = index === 0 ? 'latest-row' : '';
-           return `
-              <tr class="${rowClass}">
-                <td>${r.suelo}%</td>
-                <td>${r.agua}%</td>
-                <td>${r.temp}°C</td>
-                <td>${r.hum}%</td>
-                <td>${new Date(r.fecha).toLocaleString()}</td>
-              </tr>
-            `;
-        }).join("");
+        document.getElementById("tabla").innerHTML=data.map((r,i)=>`
+          <tr class="${i===0?'latest-row':''}">
+            <td>${r.suelo}%</td>
+            <td>${r.agua}%</td>
+            <td>${r.temp}°C</td>
+            <td>${r.hum}%</td>
+            <td>${new Date(r.fecha).toLocaleString()}</td>
+          </tr>`).join("");
 
-      } catch(e){ 
-        console.error(e); 
-        document.getElementById("alertas").textContent = "❌ ERROR: No se pudo conectar al servidor de datos.";
-        document.getElementById("alertas").style.color = "#e74c3c";
-        document.getElementById("status").textContent = "Estado del sistema: Desconectado";
+      }catch(e){
+        console.error(e);
+        document.getElementById("alertas").textContent="❌ ERROR: No se pudo conectar al servidor.";
+        document.getElementById("alertas").style.color="#e74c3c";
+        document.getElementById("status").textContent="Estado del sistema: Desconectado";
         actualizarGauges(0,0,0,0);
       }
     }
@@ -264,81 +185,54 @@
     initChartAgua();
     initGauges();
     actualizar();
-    setInterval(actualizar, 1000);
+    setInterval(actualizar,1000);
 
-    /* ============================================
-           EXPORTACIÓN CSV / EXCEL
-    =============================================== */
+    /* ===== EXPORTACIÓN COMPLETA ===== */
+    document.getElementById("exportFull").addEventListener("click", exportFull);
 
-    document.getElementById('exportCsv').addEventListener('click', () => exportData('csv'));
-    document.getElementById('exportExcel').addEventListener('click', () => exportData('excel'));
-    document.getElementById('exportFull').addEventListener('click', exportFull);
+    async function exportFull(){
+      try{
+        const res=await fetch("/api/export");
+        const data=cleanData(await res.json());
 
-    /* Exporta SOLO los últimos 10 */
-    async function exportData(type) {
-      try {
-        const res = await fetch("/api/ultimos");
-        const data = cleanData(await res.json());
+        const csv=convertToCSV(data);
+        downloadFile(csv,"datos_completos.csv","text/csv");
 
-        if(type === 'csv') {
-          const csv = convertToCSV(data);
-          downloadFile(csv, 'ultimos_registros.csv', 'text/csv');
-        } else {
-          exportExcelFile(data, 'ultimos_registros.xlsx');
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    /* Exporta TODOS los registros */
-    async function exportFull() {
-      try {
-        const res = await fetch("/api/export");
-        const data = cleanData(await res.json());
-
-        const csv = convertToCSV(data);
-        downloadFile(csv, 'datos_completos.csv', 'text/csv');
-
-        exportExcelFile(data, 'datos_completos.xlsx');
-
+        exportExcelFile(data,"datos_completos.xlsx");
         alert("✔ Exportación completa realizada");
-      } catch (e) { console.error(e); }
+      }catch(e){ console.error(e); }
     }
 
-    function cleanData(data) {
-      return data.map(d => {
-        const obj = { ...d };
-        delete obj._id;
-        delete obj.__v;
-        return obj;
-      });
+    function cleanData(data){
+      return data.map(d=>{ const obj={...d}; delete obj._id; delete obj.__v; return obj; });
     }
 
-    function convertToCSV(objArray) {
-      if (!objArray.length) return "";
-
-      const header = Object.keys(objArray[0]).join(",");
-      const rows = objArray.map(o => Object.values(o).join(","));
-      
-      return [header, ...rows].join("\n");
+    function convertToCSV(objArray){
+      if(!objArray.length) return "";
+      const header=Object.keys(objArray[0]).join(",");
+      const rows=objArray.map(o=>Object.values(o).join(","));
+      return [header,...rows].join("\n");
     }
 
-    function downloadFile(content, fileName, mimeType) {
-      const a = document.createElement('a');
-      const blob = new Blob([content], { type: mimeType });
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
+    function downloadFile(content,fileName,mimeType){
+      const a=document.createElement("a");
+      const blob=new Blob([content],{type:mimeType});
+      a.href=URL.createObjectURL(blob);
+      a.download=fileName;
       a.click();
     }
 
-    function exportExcelFile(data, fileName) {
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Datos');
-      XLSX.writeFile(wb, fileName);
+    function exportExcelFile(data,fileName){
+      const ws=XLSX.utils.json_to_sheet(data);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,"Datos");
+      XLSX.writeFile(wb,fileName);
     }
+
   </script>
 </body>
 </html>
+
 
 
 
