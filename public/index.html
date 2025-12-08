@@ -14,7 +14,18 @@
 
   <style>
     body { margin:0; padding:0; }
-    #alertas { width:90%; margin:1rem auto; padding:0.8rem; background-color:#ffffff; border-radius:8px; text-align:center; font-weight:bold; min-height:1.5em; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#222; }
+    #alertas {
+      width:90%;
+      margin:0.5rem auto 1rem;
+      padding:0.8rem;
+      background-color:#ffffff;
+      border-radius:8px;
+      text-align:center;
+      font-weight:bold;
+      min-height:1.5em;
+      box-shadow:0 4px 6px rgba(0,0,0,0.1);
+      color:#222;
+    }
     .gauge-wrapper { width:250px; height:250px; }
   </style>
 </head>
@@ -24,9 +35,13 @@
     <div class="logo-container">
       <img src="logo.png" class="logo">
     </div>
+
     <div class="title-container">
       <h1>Sistema de Monitoreo y Riego Inteligente</h1>
       <p id="status">Estado del sistema: En línea</p>
+
+      <!-- 🔹 ALERTAS MOVIDAS AQUÍ -->
+      <div id="alertas"></div>
     </div>
   </header>
 
@@ -43,9 +58,8 @@
       <canvas id="histAgua"></canvas>
     </section>
 
-    <div id="alertas"></div>
+    <!-- 🔸 Eliminado el div de alertas que estaba aquí -->
 
-    <!-- 🔹 Único botón de exportación -->
     <div id="export-buttons">
       <button id="exportFull">Exportar CSV y Excel (Completo)</button>
     </div>
@@ -144,18 +158,18 @@
       actualizarChartAgua(agua);
 
       let mensaje="✔️ Todo en rango", color="#38761d";
-      if(suelo<25 && agua<25){ mensaje="🔴 Alerta: Bajo nivel de agua y suelo seco"; color="#e74c3c";}
-      else if(suelo<25){ mensaje="🟡 Advertencia: Humedad suelo baja"; color="#f1c40f";}
-      else if(agua<25){ mensaje="🟡 Advertencia: Nivel agua bajo"; color="#f1c40f";}
+      if(suelo<25 && agua<25){ mensaje="🔴 Alerta: Bajo nivel de agua y suelo seco"; color="#e74c3c"; }
+      else if(suelo<25){ mensaje="🟡 Advertencia: Humedad suelo baja"; color="#f1c40f"; }
+      else if(agua<25){ mensaje="🟡 Advertencia: Nivel agua bajo"; color="#f1c40f"; }
 
-      document.getElementById("alertas").textContent=mensaje;
-      document.getElementById("alertas").style.color=color;
+      document.getElementById("alertas").textContent = mensaje;
+      document.getElementById("alertas").style.color = color;
     }
 
     async function actualizar() {
       try{
-        const res=await fetch("/api/ultimos");
-        const data=await res.json();
+        const res = await fetch("/api/ultimos");
+        const data = await res.json();
         if(!Array.isArray(data) || data.length===0){
           document.getElementById("tabla").innerHTML="<tr><td colspan='5'>No hay registros</td></tr>";
           actualizarGauges(0,0,0,0); return;
@@ -164,7 +178,7 @@
         const ultimo=data[0];
         actualizarGauges(ultimo.suelo,ultimo.agua,ultimo.temp,ultimo.hum);
 
-        document.getElementById("tabla").innerHTML=data.map((r,i)=>`
+        document.getElementById("tabla").innerHTML = data.map((r,i)=>`
           <tr class="${i===0?'latest-row':''}">
             <td>${r.suelo}%</td>
             <td>${r.agua}%</td>
@@ -232,6 +246,7 @@
   </script>
 </body>
 </html>
+
 
 
 
