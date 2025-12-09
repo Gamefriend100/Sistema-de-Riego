@@ -136,23 +136,40 @@
       gHum   = new JustGage({ id:"gauge_hum", ...gaugeOptions(100,"%") });
     }
 
-    function actualizarGauges(suelo, agua, temp, hum) {
-      gSuelo.refresh(Number(suelo)||0);
-      gAgua.refresh(Number(agua)||0);
-      gTemp.refresh(Number(temp)||0);
-      gHum.refresh(Number(hum)||0);
+   function actualizarGauges(suelo, agua, temp, hum) {
+  gSuelo.refresh(Number(suelo)||0);
+  gAgua.refresh(Number(agua)||0);
+  gTemp.refresh(Number(temp)||0);
+  gHum.refresh(Number(hum)||0);
 
-      actualizarChartAgua(agua);
+  actualizarChartAgua(agua);
 
-      let mensaje="✔️ Todo en rango", color="#38761d";
-      if(suelo<25 && agua<25){ mensaje="🔴 Alerta: Bajo nivel de agua y suelo seco"; color="#e74c3c"; }
-      else if(suelo<25){ mensaje="🟡 Advertencia: Humedad suelo baja"; color="#f1c40f"; }
-      else if(agua<25){ mensaje="🟡 Advertencia: Nivel agua bajo"; color="#f1c40f"; }
+  // ========================
+  // NUEVA LÓGICA DE ALERTAS
+  // ========================
+  let mensaje = "✔️ Todo en rango";
+  let color = "#38761d";
 
-      document.getElementById("alertas").textContent = mensaje;
-      document.getElementById("alertas").style.color = color;
-    }
+  if (suelo < 38 && agua < 25) {
+    mensaje = "🔴 Alerta: Suelo seco y nivel de agua crítico";
+    color = "#e74c3c";
+  }
+  else if (suelo < 38 && agua >= 25) {
+    mensaje = "💧 Riego activado: Humedad baja en el suelo";
+    color = "#007bff";
+  }
+  else if (agua < 25) {
+    mensaje = "🟡 Advertencia: Nivel de agua bajo";
+    color = "#f1c40f";
+  }
+  else if (suelo >= 80) {
+    mensaje = "🌧 Suelo muy húmedo, riego detenido";
+    color = "#33b5a1";
+  }
 
+  document.getElementById("alertas").textContent = mensaje;
+  document.getElementById("alertas").style.color = color;
+}
     async function actualizar() {
       try{
         const res = await fetch("/api/ultimos");
@@ -233,6 +250,7 @@
   </script>
 </body>
 </html>
+
 
 
 
