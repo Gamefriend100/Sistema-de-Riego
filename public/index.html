@@ -14,18 +14,7 @@
 
   <style>
     body { margin:0; padding:0; }
-    #alertas {
-      width:90%;
-      margin:0.5rem auto 1rem;
-      padding:0.8rem;
-      background-color:#ffffff;
-      border-radius:8px;
-      text-align:center;
-      font-weight:bold;
-      min-height:1.5em;
-      box-shadow:0 4px 6px rgba(0,0,0,0.1);
-      color:#222;
-    }
+    #alertas { width:90%; margin:1rem auto; padding:0.8rem; background-color:#ffffff; border-radius:8px; text-align:center; font-weight:bold; min-height:1.5em; box-shadow:0 4px 6px rgba(0,0,0,0.1); color:#222; }
     .gauge-wrapper { width:250px; height:250px; }
   </style>
 </head>
@@ -35,13 +24,9 @@
     <div class="logo-container">
       <img src="logo.png" class="logo">
     </div>
-
     <div class="title-container">
       <h1>Sistema de Monitoreo y Riego Inteligente</h1>
       <p id="status">Estado del sistema: En línea</p>
-
-      <!-- 🔹 ALERTAS MOVIDAS AQUÍ -->
-      <div id="alertas"></div>
     </div>
   </header>
 
@@ -53,13 +38,15 @@
       <div class="gauge-wrapper"><h3 class="gauge-title">Humedad Ambiente</h3><div id="gauge_hum"></div></div>
     </section>
 
+    <!-- 📌 ALERTAS AHORA VA AQUÍ -->
+    <div id="alertas"></div>
+
     <section class="chart-section">
       <h2>Histórico del Nivel de Agua</h2>
       <canvas id="histAgua"></canvas>
     </section>
 
-    <!-- 🔸 Eliminado el div de alertas que estaba aquí -->
-
+    <!-- 🔹 Único botón de exportación -->
     <div id="export-buttons">
       <button id="exportFull">Exportar CSV y Excel (Completo)</button>
     </div>
@@ -175,7 +162,7 @@
           actualizarGauges(0,0,0,0); return;
         }
 
-        const ultimo=data[0];
+        const ultimo = data[0];
         actualizarGauges(ultimo.suelo,ultimo.agua,ultimo.temp,ultimo.hum);
 
         document.getElementById("tabla").innerHTML = data.map((r,i)=>`
@@ -206,10 +193,10 @@
 
     async function exportFull(){
       try{
-        const res=await fetch("/api/export");
-        const data=cleanData(await res.json());
+        const res = await fetch("/api/export");
+        const data = cleanData(await res.json());
 
-        const csv=convertToCSV(data);
+        const csv = convertToCSV(data);
         downloadFile(csv,"datos_completos.csv","text/csv");
 
         exportExcelFile(data,"datos_completos.xlsx");
@@ -223,22 +210,22 @@
 
     function convertToCSV(objArray){
       if(!objArray.length) return "";
-      const header=Object.keys(objArray[0]).join(",");
-      const rows=objArray.map(o=>Object.values(o).join(","));
+      const header = Object.keys(objArray[0]).join(",");
+      const rows = objArray.map(o=>Object.values(o).join(","));
       return [header,...rows].join("\n");
     }
 
     function downloadFile(content,fileName,mimeType){
-      const a=document.createElement("a");
-      const blob=new Blob([content],{type:mimeType});
-      a.href=URL.createObjectURL(blob);
-      a.download=fileName;
+      const a = document.createElement("a");
+      const blob = new Blob([content],{type:mimeType});
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
       a.click();
     }
 
     function exportExcelFile(data,fileName){
-      const ws=XLSX.utils.json_to_sheet(data);
-      const wb=XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,ws,"Datos");
       XLSX.writeFile(wb,fileName);
     }
@@ -246,10 +233,6 @@
   </script>
 </body>
 </html>
-
-
-
-
 
 
 
